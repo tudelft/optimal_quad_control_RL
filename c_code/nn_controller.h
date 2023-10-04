@@ -1,6 +1,5 @@
 #ifndef NN_CONTROLLER_H
 #define NN_CONTROLLER_H
-#define NN_INDI_CMDS
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -17,6 +16,6 @@ const float start_pos[3];
 uint8_t target_gate_index;
 
 void nn_reset(void);
-void nn_control(const float world_state[13], float indi_cmd[4]);
+void nn_control(const float world_state[16], const float disturbances[4], float rpms[4]);
 
 #endif

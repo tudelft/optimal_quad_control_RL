@@ -5,10 +5,10 @@
 bool deterministic = false;
 
 const float output_std[4] = {
-    0.14885243773460388,
-    0.1528247445821762,
-    0.15914447605609894,
-    0.19237209856510162,
+    0.8907372355461121,
+    0.8487850427627563,
+    0.8973739147186279,
+    0.8708917498588562,
 };
 
 const float gate_pos[NUM_GATES][3] = {
@@ -65,7 +65,7 @@ void nn_reset() {
     target_gate_index = 0;
 }
 
-void nn_control(const float world_state[13], float indi_cmd[4]) {
+void nn_control(const float world_state[16], const float disturbances[4], float rpms[4]) {
     // Get the current position, velocity and heading
     float pos[3] = {world_state[0], world_state[1], world_state[2]};
     float vel[3] = {world_state[3], world_state[4], world_state[5]};
@@ -107,7 +107,7 @@ void nn_control(const float world_state[13], float indi_cmd[4]) {
     while (yaw_rel < -M_PI) {yaw_rel += 2*M_PI;}
 
     // Get the neural network input
-    float nn_input[13+4*GATES_AHEAD];
+    float nn_input[16+4*GATES_AHEAD+4];
     // position and velocity
     for (int i = 0; i < 3; i++) {
         nn_input[i] = pos_rel[i];
@@ -121,21 +121,38 @@ void nn_control(const float world_state[13], float indi_cmd[4]) {
     nn_input[9] = world_state[9];
     nn_input[10] = world_state[10];
     nn_input[11] = world_state[11];
-    // normalized thrust 
-    float T_min = 0.0;
-    float T_max = 16.0;
-    nn_input[12] = (world_state[12] - T_min) / (T_max - T_min) * 2 - 1;
+    // motor rpms scaled to [-1,1]
+    float w_min = 3000;
+    float w_max = 11000;
+    nn_input[12] = (world_state[12] - w_min) * 2 / (w_max - w_min) - 1;
+    nn_input[13] = (world_state[13] - w_min) * 2 / (w_max - w_min) - 1;
+    nn_input[14] = (world_state[14] - w_min) * 2 / (w_max - w_min) - 1;
+    nn_input[15] = (world_state[15] - w_min) * 2 / (w_max - w_min) - 1;
 
     // relative gate positions and headings
     for (int i = 0; i < GATES_AHEAD; i++) {
         uint8_t index = target_gate_index + i + 1;
         // loop back to the first gate if we reach the end
         index = index % NUM_GATES;
-        nn_input[13+4*i]   = gate_pos_rel[index][0];
-        nn_input[13+4*i+1] = gate_pos_rel[index][1];
-        nn_input[13+4*i+2] = gate_pos_rel[index][2];
-        nn_input[13+4*i+3] = gate_yaw_rel[index];
+        nn_input[16+4*i]   = gate_pos_rel[index][0];
+        nn_input[16+4*i+1] = gate_pos_rel[index][1];
+        nn_input[16+4*i+2] = gate_pos_rel[index][2];
+        nn_input[16+4*i+3] = gate_yaw_rel[index];
     }
+    // disturbance input
+    float Mx_min = -0.03;
+    float Mx_max = 0.03;
+    float My_min = -0.03;
+    float My_max = 0.03;
+    float Mz_min = -0.01;
+    float Mz_max = 0.01;
+    float Fz_min = -0.5;
+    float Fz_max = 0.5;
+    nn_input[16+4*GATES_AHEAD]   = (disturbances[0] - Mx_min) * 2 / (Mx_max - Mx_min) - 1;
+    nn_input[16+4*GATES_AHEAD+1] = (disturbances[1] - My_min) * 2 / (My_max - My_min) - 1;
+    nn_input[16+4*GATES_AHEAD+2] = (disturbances[2] - Mz_min) * 2 / (Mz_max - Mz_min) - 1;
+    nn_input[16+4*GATES_AHEAD+3] = (disturbances[3] - Fz_min) * 2 / (Fz_max - Fz_min) - 1;
+
     // Get the neural network output and write to the action array
     float nn_output[4];
     nn_forward(nn_input, nn_output);
@@ -156,16 +173,7 @@ void nn_control(const float world_state[13], float indi_cmd[4]) {
         // clip the output to the range [-1, 1]
         if (nn_output[i] > 1) {nn_output[i] = 1;}
         if (nn_output[i] < -1) {nn_output[i] = -1;}
+         // map the output to the range [w_min, w_max]
+        rpms[i] = (w_max - w_min) * (nn_output[i] + 1) / 2 + w_min;
     }
-    // map the output to the correct ranges
-    float p_min = -3.0;
-    float p_max = 3.0;
-    float q_min = -3.0;
-    float q_max = 3.0;
-    float r_min = -2.0;
-    float r_max = 2.0;
-    indi_cmd[0] = (nn_output[0] + 1) / 2 * (p_max - p_min) + p_min;
-    indi_cmd[1] = (nn_output[1] + 1) / 2 * (q_max - q_min) + q_min;
-    indi_cmd[2] = (nn_output[2] + 1) / 2 * (r_max - r_min) + r_min;
-    indi_cmd[3] = (nn_output[3] + 1) / 2 * (T_max - T_min) + T_min;
 }
