@@ -1,4 +1,4 @@
-# quad_RL
+# optimal_quad_control_RL
 Reinforcement learning for time optimal end-to-end quadcopter control
 
 Main notebooks:
