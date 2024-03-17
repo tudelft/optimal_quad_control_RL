@@ -15,14 +15,16 @@ cam = graphics.Camera(
     cameraMatrix=np.array([[1.e+3, 0., width/2], [0., 1.e+3, height/2], [0., 0., 1.]]),
     distCoeffs=np.array([0., 0., 0., 0., 0.])
 )
-cam.r[0] = -12.
-
+cam.r[0] = -15.
 cam.rotate([0., -np.pi/2, 0.])
 
 # grid = graphics.create_grid(10, 10, 0.1)
 big_grid = graphics.create_grid(10, 10, 1)
 
 drone, forces = graphics.create_drone(0.08)
+
+# obstacles are put in a dict
+obstacles = {}
 
 # 1x1m gate
 gate = graphics.create_path(np.array([
@@ -56,6 +58,19 @@ record=False
 def nothing(x):
     pass
 
+def get_obstacle(x,y,r,h):
+    if (r,h) in obstacles.keys():
+        o = obstacles[(r,h)]
+        o.translate([x-o.pos[0],y-o.pos[1],0])
+        return o
+    else:
+        # create cylinder
+        o = graphics.create_cilinder(r, h)
+        o.translate([x,y,0])
+        obstacles[(r,h)] = o
+        return o
+        
+
 def get_drone_state_zero():
     return {
         'x': 0,
@@ -81,6 +96,7 @@ def view(get_drone_state=get_drone_state_zero,
     follow=False
     record=False
     draw_forces=True
+    drone_cam = False
 
     # videowriter
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -115,19 +131,34 @@ def view(get_drone_state=get_drone_state_zero,
         pos = np.stack([state['x'], state['y'], state['z']]).T
         ori = np.stack([state['phi'], state['theta'], state['psi']]).T
         u = np.stack([state['u1'], state['u2'], state['u3'], state['u4']]).T
+        
+        # obstacles
+        draw_obstacles = 'obst_x' in state.keys()          
 
         # update camera
         if follow:
             cam.set_center(drone.pos)
         else:
             cam.set_center(np.zeros(3))
+            
+        # drone camera
+        if drone_cam:
+            cam.pos = drone.vertices[-1] # camera point is the last vertex of the drone
+            cam.set_rotation(drone.theta)
 
         # using screen resolution of width x height
         frame = 255*np.ones((height, width, 3), dtype=np.uint8)
     
         # draw grid
         big_grid.draw(frame, cam, color=(200, 200, 200), pt=1)
-
+        
+        # draw obstacles
+        if draw_obstacles:
+            for x,y,r,h in zip(state['obst_x'], state['obst_y'], state['obst_r'], state['obst_h']):
+                for j in range(len(x)):
+                    o = get_obstacle(x[j],y[j],r[j],h[j])
+                    o.draw(frame, cam, color=(0,140,255), pt=2)
+                
         # draw all drones
         if len(pos.shape) == 1: # single drone
             drone.translate(pos-drone.pos)
@@ -185,6 +216,14 @@ def view(get_drone_state=get_drone_state_zero,
         # draw forces when s is pressed
         elif key == ord('s'):
             draw_forces = not draw_forces
+        # show drone cam image when d is pressed
+        elif key == ord('d'):
+            if drone_cam:
+                cam.pos = np.array([-100., 0., 0.])
+                cam.theta = np.zeros(3)
+                cam.r[0] = -15.
+                cam.rotate([0., -np.pi/2, 0.])
+            drone_cam = not drone_cam
         # zoom in with 1
         elif key == ord('1'):
             cam.zoom(1.05)

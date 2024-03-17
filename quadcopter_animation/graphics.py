@@ -31,7 +31,7 @@ class Camera:
         self.rMat = rotation_matrix(theta)
 
         self.center = np.zeros(3)               # camera rotates around center
-        self.r = np.array([-8., 0., 0.])
+        self.r = np.array([-15., 0., 0.])
 
         # intrinsic camera parameters
         self.cameraMatrix = cameraMatrix
@@ -40,6 +40,10 @@ class Camera:
     def set_center(self, vector):
         self.center = vector
         self.pos = np.dot(self.rMat, self.r) + self.center
+        
+    def set_rotation(self, theta):
+        self.theta = theta
+        self.rMat = rotation_matrix(self.theta)
 
     def rotate(self, theta):
         self.theta += theta
@@ -211,8 +215,11 @@ def create_drone(r):
         drone.vertices,
         np.array([[r, -r, 0.], [r, r, 0.], [-r, r, 0.], [-r, -r, 0.]])  # centers of the circles
     ])
+    
+    # extra vertex for camera mounting point
+    drone.vertices = np.concatenate([drone.vertices, np.array([[1.1*r, 0, 0.]])])
 
-    T1, T2, T3, T4 = drone.vertices[-4:]    # thrust on 4 positions
+    T1, T2, T3, T4, cam_point = drone.vertices[-5:]    # thrust on 4 positions, camera mounting point
     #Fg = Force(drone.pos)                   # gravity acts on center of mass
     forces = Force(T1), Force(T2), Force(T3), Force(T4)  #, Fg
     return drone, forces
@@ -225,3 +232,15 @@ def set_thrust(drone, forces, T):
     T3.F = - T[2] * rotation_matrix(drone.theta)[:, 2]
     T4.F = - T[3] * rotation_matrix(drone.theta)[:, 2]
 
+def create_cilinder(r, h, num=20):
+    # create 2 circles
+    c1 = create_circle(r, 0, 0, 0)
+    c2 = create_circle(r, 0, 0, -h)
+    
+    # group them
+    cilinder = group([c1, c2])
+    
+    # create the sides
+    extra_edges = [(i, i+num) for i in range(num)]
+    cilinder.edges = np.concatenate([cilinder.edges, extra_edges])
+    return cilinder
