@@ -7,12 +7,12 @@ import os
 # screen resolution
 width = 864
 height = 700 #864
-
+f=1.e+3/2
 # graphics
 cam = graphics.Camera(
     pos=np.array([-5., 0., 0.]),
     theta=np.zeros(3),
-    cameraMatrix=np.array([[1.e+3, 0., width/2], [0., 1.e+3, height/2], [0., 0., 1.]]),
+    cameraMatrix=np.array([[f, 0., width/2], [0., f, height/2], [0., 0., 1.]]),
     distCoeffs=np.array([0., 0., 0., 0., 0.])
 )
 cam.r[0] = -15.
@@ -203,7 +203,7 @@ def view(get_drone_state=get_drone_state_zero,
             # gate_collision_box.draw(frame, cam, color=(200,200,200), pt=1)
 
         # draw camera observation        
-        if draw_camera_obs: # and drone_cam:
+        if draw_camera_obs and drone_cam:
             for p1x, p1y, p2x, p2y, w, cam_obs in zip(state['p1x'], state['p1y'], state['p2x'], state['p2y'], state['w'], state['cam_obs']):
                 # draw obstacle projection (rectangle)
                 for i in range(len(p1x)):
@@ -228,8 +228,8 @@ def view(get_drone_state=get_drone_state_zero,
                 n = int(np.sqrt(len(cam_obs)))
                 for i in range(n):
                     # draw gridlines
-                    cv2.line(frame, (0, int(i*height/n)), (width, int(i*height/n)), (0,0,0), 1)
-                    cv2.line(frame, (int(i*width/n), 0), (int(i*width/n), height), (0,0,0), 1) 
+                    # cv2.line(frame, (0, int(i*height/n)), (width, int(i*height/n)), (0,0,0), 1)
+                    # cv2.line(frame, (int(i*width/n), 0), (int(i*width/n), height), (0,0,0), 1) 
                     # draw a little + in each cell
                     for j in range(n):
                         point =  (int((i+0.5)*width/n), int((j+0.5)*height/n))
