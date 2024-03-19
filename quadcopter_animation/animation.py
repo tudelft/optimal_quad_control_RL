@@ -97,6 +97,10 @@ def view(get_drone_state=get_drone_state_zero,
     record=False
     draw_forces=True
     drone_cam = False
+    pause = False
+    
+    # get state
+    state = get_drone_state()
 
     # videowriter
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -126,14 +130,18 @@ def view(get_drone_state=get_drone_state_zero,
             break
 
         # get drone state
-        state = get_drone_state()
+        if not pause:
+            state = get_drone_state()
 
         pos = np.stack([state['x'], state['y'], state['z']]).T
         ori = np.stack([state['phi'], state['theta'], state['psi']]).T
         u = np.stack([state['u1'], state['u2'], state['u3'], state['u4']]).T
         
         # obstacles
-        draw_obstacles = 'obst_x' in state.keys()          
+        draw_obstacles = 'obst_x' in state.keys()   
+        
+        # camera observation
+        draw_camera_obs = 'p1x' in state.keys()       
 
         # update camera
         if follow:
@@ -194,6 +202,51 @@ def view(get_drone_state=get_drone_state_zero,
             gate.draw(frame, cam, color=(0,140,255), pt=4)
             # gate_collision_box.draw(frame, cam, color=(200,200,200), pt=1)
 
+        # draw camera observation        
+        if draw_camera_obs: # and drone_cam:
+            for p1x, p1y, p2x, p2y, w, cam_obs in zip(state['p1x'], state['p1y'], state['p2x'], state['p2y'], state['w'], state['cam_obs']):
+                # draw obstacle projection (rectangle)
+                for i in range(len(p1x)):
+                    if w[i] > 0:
+                        # draw line from p1 to p2
+                        # cv2.line(frame, (int(p1x[i]), int(p1y[i])), (int(p2x[i]), int(p2y[i])), (0,0,0), 2)
+                        
+                        # sides of the rectangle
+                        s1 = np.array([p1x[i]-p2x[i],p1y[i]-p2y[i]])
+                        s2 = np.array([s1[1], -s1[0]]) # perpendicular to s1
+                        # scale s2 to have length w/2
+                        s2 = s2/np.linalg.norm(s2)*w[i]/2
+                        # get 4 corners of the rectangle
+                        p1 = [int(p1x[i]+s2[0]), int(p1y[i]+s2[1])]
+                        p2 = [int(p1x[i]-s2[0]), int(p1y[i]-s2[1])]
+                        p3 = [int(p2x[i]-s2[0]), int(p2y[i]-s2[1])]
+                        p4 = [int(p2x[i]+s2[0]), int(p2y[i]+s2[1])]
+                        # draw rectangle (not filled)
+                        cv2.polylines(frame, [np.array([p1,p2,p3,p4], dtype=np.int32)], True, (0,0,0), 2)
+                                                
+                # draw camera observation nxn pixel obstacle mask
+                n = int(np.sqrt(len(cam_obs)))
+                for i in range(n):
+                    # draw gridlines
+                    cv2.line(frame, (0, int(i*height/n)), (width, int(i*height/n)), (0,0,0), 1)
+                    cv2.line(frame, (int(i*width/n), 0), (int(i*width/n), height), (0,0,0), 1) 
+                    # draw a little + in each cell
+                    for j in range(n):
+                        point =  (int((i+0.5)*width/n), int((j+0.5)*height/n))
+                        cv2.line(frame, (point[0]-5, point[1]), (point[0]+5, point[1]), (0,0,0), 1)
+                        cv2.line(frame, (point[0], point[1]-5), (point[0], point[1]+5), (0,0,0), 1)
+  
+                corners = [[i*width/n,j*height/n] for i in range(n) for j in range(n)]
+                for i, (u,v) in enumerate(corners):
+                    if cam_obs[i] > 0:
+                        pass
+                        # solid rectangle with 50% transparency
+                        overlay = frame.copy()
+                        cv2.rectangle(overlay, (int(u), int(v)), (int(u+width/n), int(v+height/n)), (0,0,255), -1)
+                        transparency = 0.2
+                        cv2.addWeighted(overlay, transparency, frame, 1 - transparency, 0, frame)
+                        
+                
         # recording
         if record:
             out.write(frame)
@@ -239,7 +292,8 @@ def view(get_drone_state=get_drone_state_zero,
             else:
                 print('recording started')
             record = not record
-        
+        elif key == ord('p'):
+            pause = not pause
         # show
         if show_window:
             cv2.imshow('animation', frame)
@@ -413,7 +467,7 @@ def animate(t, x, y, z, phi, theta, psi, u,
             gate_collision_box.translate(gpos-gate_collision_box.pos)
             gate.rotate([0,0,gyaw])
             gate_collision_box.rotate([0,0,gyaw])
-            gate.draw(frame, cam, color=(0,140,255), pt=4)
+            gate.draw(frame, cam, color=(0,140,255), pt=4)            
             
         for i in range(len(names)):
             if len(colors)>i:
