@@ -92,12 +92,18 @@ def view(get_drone_state=get_drone_state_zero,
          record_steps=0,
          record_file='output.mp4',
          show_window=True,
+         drone_cam=False,
          ):
     follow=False
     record=False
     draw_forces=True
-    drone_cam = False
     pause = False
+    
+    # reset cam
+    cam.pos = np.array([-100., 0., 0.])
+    cam.theta = np.zeros(3)
+    cam.r[0] = -15.
+    cam.rotate([0., -np.pi/2, 0.])
     
     # get state
     state = get_drone_state()
@@ -214,15 +220,18 @@ def view(get_drone_state=get_drone_state_zero,
                         # sides of the rectangle
                         s1 = np.array([p1x[i]-p2x[i],p1y[i]-p2y[i]])
                         s2 = np.array([s1[1], -s1[0]]) # perpendicular to s1
-                        # scale s2 to have length w/2
-                        s2 = s2/np.linalg.norm(s2)*w[i]/2
-                        # get 4 corners of the rectangle
-                        p1 = [int(p1x[i]+s2[0]), int(p1y[i]+s2[1])]
-                        p2 = [int(p1x[i]-s2[0]), int(p1y[i]-s2[1])]
-                        p3 = [int(p2x[i]-s2[0]), int(p2y[i]-s2[1])]
-                        p4 = [int(p2x[i]+s2[0]), int(p2y[i]+s2[1])]
-                        # draw rectangle (not filled)
-                        cv2.polylines(frame, [np.array([p1,p2,p3,p4], dtype=np.int32)], True, (0,0,0), 2)
+                        
+                        length_s2 = np.linalg.norm(s2)
+                        if length_s2 > 0:
+                            # scale s2 to have length w/2
+                            s2 = s2/length_s2*w[i]/2
+                            # get 4 corners of the rectangle
+                            p1 = [int(p1x[i]+s2[0]), int(p1y[i]+s2[1])]
+                            p2 = [int(p1x[i]-s2[0]), int(p1y[i]-s2[1])]
+                            p3 = [int(p2x[i]-s2[0]), int(p2y[i]-s2[1])]
+                            p4 = [int(p2x[i]+s2[0]), int(p2y[i]+s2[1])]
+                            # draw rectangle (not filled)
+                            cv2.polylines(frame, [np.array([p1,p2,p3,p4], dtype=np.int32)], True, (0,0,0), 2)
                                                 
                 # draw camera observation nxn pixel obstacle mask
                 n = int(np.sqrt(len(cam_obs)))
