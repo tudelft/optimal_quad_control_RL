@@ -81,6 +81,9 @@ def view(get_drone_state=get_drone_state_zero,
     follow=False
     record=False
     draw_forces=True
+    
+    # target point for the drone
+    target = graphics.create_path(np.array([[0,0,0],[0,0,0.01]]))
 
     # videowriter
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -127,6 +130,13 @@ def view(get_drone_state=get_drone_state_zero,
     
         # draw grid
         big_grid.draw(frame, cam, color=(200, 200, 200), pt=1)
+        
+        # draw target
+        if 'traj_x' in state:
+            target_pos = np.stack([state['traj_x'], state['traj_y'], state['traj_z']]).T
+            for tp in target_pos:
+                target.translate(tp-target.pos)
+                target.draw(frame, cam, color=(0,255,0), pt=10)
 
         # draw all drones
         if len(pos.shape) == 1: # single drone
