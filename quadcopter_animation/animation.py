@@ -157,7 +157,10 @@ def view(get_drone_state=get_drone_state_zero,
                 graphics.set_thrust(drone, forces, u[i]*scl)
 
                 # draw drone
-                drone.draw(frame, cam, color=(255, 0, 0), pt=2)
+                if 'color' in state and len(state['color']) > i:
+                    drone.draw(frame, cam, color=state['color'][i], pt=2)
+                else:
+                    drone.draw(frame, cam, color=(255, 0, 0), pt=2)
 
                 # draw forces
                 if draw_forces:
