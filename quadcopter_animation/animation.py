@@ -24,12 +24,13 @@ big_grid = graphics.create_grid(10, 10, 1)
 
 drone, forces = graphics.create_drone(0.08)
 
-# 1x1m gate
+# nxn (m) gate
+n = 1.
 gate = graphics.create_path(np.array([
-    [0, 0.5, 0.5],
-    [0, 0.5, -0.5],
-    [0, -0.5, -0.5],
-    [0, -0.5, 0.5]
+    [0, n/2, n/2],
+    [0, n/2, -n/2],
+    [0, -n/2, -n/2],
+    [0, -n/2, n/2]
 ]), loop=True)
 # gate_direction = graphics.create_path(np.array([[0,0,0],[.1,0,0]]))
 # gate = graphics.group([gate, gate_direction])
