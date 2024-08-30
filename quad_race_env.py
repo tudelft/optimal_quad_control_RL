@@ -129,8 +129,16 @@ class Quadcopter3DGates(VecEnv):
         # Pause if collision
         self.pause_if_collision = pause_if_collision
         
+        # print([p.name for p in params])
+        # print( ['k_x', 'k_y', 'k_w', 'k_p1', 'k_p2', 'k_p3', 'k_p4', 'k_q1', 'k_q2', 'k_q3', 'k_q4', 'k_r1', 'k_r2', 'k_r3', 'k_r4', 'k_r5', 'k_r6', 'k_r7', 'k_r8', 'tau', 'k', 'w_min', 'w_max'])
+        # raise ValueError('stop')
+    
         # Domain randomization
-        self.randomization = lambda n: np.array([randomization(n)[p.name] for p in params]).T
+        def rand_f(n):
+            param_dict = randomization(n)
+            return np.array([param_dict[p.name] for p in params]).T
+        
+        self.randomization = rand_f
         self.params = self.randomization(num_envs)
         
         # Motor limit

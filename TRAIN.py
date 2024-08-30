@@ -654,7 +654,7 @@ test_env = Quadcopter3DGates(num_envs=10, gates_pos=gate_pos, gate_yaw=gate_yaw,
 env = VecMonitor(env)
 
 # MODEL DEFINITION
-policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=[120,120,120], vf=[64,64])], log_std_init = 0)
+policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=[64,64], vf=[64,64])], log_std_init = 0)
 model = PPO(
     "MlpPolicy",
     env,
@@ -719,7 +719,7 @@ def train(model, test_env, log_name, n=int(1e8)):
         
         
         
-name = 'figure8_64_64_64'
+name = 'figure8_64_64_TRAIN'
 import shutil
 shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
 shutil.rmtree(models_dir + '/' + name, ignore_errors=True)

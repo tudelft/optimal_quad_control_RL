@@ -1,5 +1,6 @@
 # library imports
 import os
+import sys
 from stable_baselines3 import PPO
 from datetime import datetime
 from stable_baselines3.common.vec_env import VecMonitor
@@ -63,7 +64,7 @@ test_env = Quadcopter3DGates(
 env = VecMonitor(env)
 
 # MODEL DEFINITION
-policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=[64,64,64], vf=[64,64])], log_std_init = 0)
+policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=[64,64], vf=[64,64])], log_std_init = 0)
 model = PPO(
     "MlpPolicy",
     env,
@@ -77,28 +78,28 @@ model = PPO(
 )
 
 # ANIMATION FUNCTION
-def animate_policy(model, env, deterministic=False, log_times=False, print_vel=False, log=None, **kwargs):
-    env.reset()
-    def run():
-        actions, _ = model.predict(env.states, deterministic=deterministic)
+# def animate_policy(model, env, deterministic=False, log_times=False, print_vel=False, log=None, **kwargs):
+#     env.reset()
+#     def run():
+#         actions, _ = model.predict(env.states, deterministic=deterministic)
 
-        states, rewards, dones, infos = env.step(actions)
-        if log != None:
-            log(states)
-        if print_vel:
-            # compute mean velocity
-            vels = env.world_states[:,3:6]
-            mean_vel = np.linalg.norm(vels, axis=1).mean()
-            print(mean_vel)
-        if log_times:
-            if rewards[0] == 10:
-                print(env.step_counts[0]*env.dt)
+#         states, rewards, dones, infos = env.step(actions)
+#         if log != None:
+#             log(states)
+#         if print_vel:
+#             # compute mean velocity
+#             vels = env.world_states[:,3:6]
+#             mean_vel = np.linalg.norm(vels, axis=1).mean()
+#             print(mean_vel)
+#         if log_times:
+#             if rewards[0] == 10:
+#                 print(env.step_counts[0]*env.dt)
         
-        return env.render()
-    animation.view(run, gate_pos=env.gate_pos, gate_yaw=env.gate_yaw, **kwargs)
+#         return env.render()
+#     animation.view(run, gate_pos=env.gate_pos, gate_yaw=env.gate_yaw, **kwargs)
     
 # animate untrained policy (use this to set the recording camera position)
-animate_policy(model, test_env)
+# animate_policy(model, test_env)
     
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
@@ -111,19 +112,33 @@ def train(model, test_env, log_name, n=int(1e8)):
         # save model
         model.save(models_dir + '/' + log_name + '/' + str(time_steps))
         # save policy animation
-        animate_policy(
-            model,
-            test_env,
-            record_steps=1200,
-            record_file=video_log_dir + '/' + log_name + '/' + str(time_steps) + '.mp4',
-            show_window=False
-        )
+        # animate_policy(
+        #     model,
+        #     test_env,
+        #     record_steps=1200,
+        #     record_file=video_log_dir + '/' + log_name + '/' + str(time_steps) + '.mp4',
+        #     show_window=False
+        # )
         
-name = 'figure8_64_64_64_3rd'
-import shutil
-shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
-shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
-shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
 
-# run training loop
-train(model, test_env, name)
+# name = 'figure8_64_64_again!'
+# import shutil
+# shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
+# shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
+# shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
+
+# RUN TRAINING LOOP
+# get name from the passed arguments
+if len(sys.argv) > 1:
+    name = sys.argv[1]
+
+    # delete
+    import shutil
+    shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
+    shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
+    shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
+    
+    train(model, test_env, name)
+else:
+    print('Please provide a name for the training run.')
+    sys.exit(1)
