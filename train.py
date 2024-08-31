@@ -24,6 +24,15 @@ parser.add_argument('--pi', type=int, nargs='+', default=[64, 64], help='Archite
 # Architecture of the value function (list of integers)
 parser.add_argument('--vf', type=int, nargs='+', default=[64, 64], help='Architecture of the value function (e.g., --vf 64 64). Default is [64, 64]')
 
+# State history input length (default is 0)
+parser.add_argument('--state_history', type=int, default=0, help='State history input length (default is 0)')
+
+# Action history input length (default is 0)
+parser.add_argument('--action_history', type=int, default=0, help='Action history input length (default is 0)')
+
+# Param input (boolean, default is False)
+parser.add_argument('--param_input', action='store_true', help='Use parameter input')
+
 # Parse the arguments
 args = parser.parse_args()
 
@@ -65,7 +74,9 @@ env = Quadcopter3DGates(
     gate_yaw=gate_yaw,
     start_pos=start_pos,
     randomization=randomization_big,
-    gates_ahead=1
+    gates_ahead=1, 
+    num_state_history=args.state_history,
+    num_action_history=args.action_history,
 )
 test_env = Quadcopter3DGates(
     num_envs=10,
@@ -74,7 +85,8 @@ test_env = Quadcopter3DGates(
     start_pos=start_pos,
     randomization=randomization_big,
     gates_ahead=1,
-    # pause_if_collision=True
+    num_state_history=args.state_history,
+    num_action_history=args.action_history,
 )
 
 # Wrap the environment in a Monitor wrapper
@@ -108,6 +120,10 @@ print("Saving videos to", video_log_dir)
 #     env.reset()
 #     def run():
 #         actions, _ = model.predict(env.states, deterministic=deterministic)
+        
+#         # print('actions=', actions)
+#         # print('states=', env.states)
+#         # print('')
 
 #         states, rewards, dones, infos = env.step(actions)
 #         if log != None:
@@ -132,7 +148,7 @@ print("Saving videos to", video_log_dir)
 def train(model, test_env, log_name, n=int(1e8)):
     # save every 10 policy rollouts
     TIMESTEPS = model.n_steps*env.num_envs*10
-    for i in range(0,n):
+    while model.num_timesteps < n:
         model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=log_name)
         time_steps = model.num_timesteps
         # save model

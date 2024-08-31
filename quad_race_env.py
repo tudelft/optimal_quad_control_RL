@@ -116,7 +116,10 @@ class Quadcopter3DGates(VecEnv):
                  gates_ahead=1,
                  pause_if_collision=False,
                  motor_limit=1.0,
-                 initialize_at_random_gates=True
+                 initialize_at_random_gates=True,
+                 num_state_history=0,
+                 num_action_history=0,
+                 param_input=False,
                  ):
         
         # Define the race track
@@ -147,6 +150,10 @@ class Quadcopter3DGates(VecEnv):
         # Initialize at random gates
         self.initialize_at_random_gates = initialize_at_random_gates
 
+        # state, action history
+        self.num_state_history = num_state_history
+        self.num_action_history = num_action_history
+        
         # Calculate relative gates
         # pos,yaw of gate i in reference frame of gate i-1 (assumes a looped track)
         self.gate_pos_rel = np.zeros((self.num_gates,3), dtype=np.float32)
@@ -178,11 +185,11 @@ class Quadcopter3DGates(VecEnv):
         # observation space: pos[G], vel[G], att[eulerB->G], rates[B], rpms, future_gates[G], future_gate_dirs[G]
         # [G] = reference frame aligned with target gate
         # [B] = body frame
-        self.state_len = 16+4*self.gates_ahead
-        self.input_hist = 1
+        self.state_len = 16+4*self.gates_ahead+4*self.num_action_history
+        self.obs_len = self.state_len*(1+self.num_state_history)
         observation_space = spaces.Box(
-            low  = np.array([-np.inf]*self.state_len*self.input_hist),
-            high = np.array([ np.inf]*self.state_len*self.input_hist)
+            low  = np.array([-np.inf]*self.obs_len),
+            high = np.array([ np.inf]*self.obs_len)
         )
 
         # Initialize the VecEnv
@@ -191,10 +198,12 @@ class Quadcopter3DGates(VecEnv):
         # world state: pos[W], vel[W], att[eulerB->W], rates[B], rpms
         self.world_states = np.zeros((num_envs,16), dtype=np.float32)
         # observation state
-        self.states = np.zeros((num_envs,self.state_len*self.input_hist), dtype=np.float32)
+        self.states = np.zeros((num_envs,self.obs_len), dtype=np.float32)
         # state history tracking
         num_hist = 10
         self.state_hist = np.zeros((num_envs,num_hist,self.state_len), dtype=np.float32)
+        # action history tracking
+        self.action_hist = np.zeros((num_envs,num_hist,4), dtype=np.float32)
 
         # Define any other environment-specific parameters
         self.max_steps = 1200      # Maximum number of steps in an episode
@@ -259,14 +268,22 @@ class Quadcopter3DGates(VecEnv):
             new_states[valid,16+4*i:16+4*i+3] = self.gate_pos_rel[indices[valid]]
             new_states[valid,16+4*i+3] = self.gate_yaw_rel[indices[valid]]
 
-        # update history
+        # update action history
+        self.action_hist = np.roll(self.action_hist, 1, axis=1)
+        self.action_hist[:,0] = self.actions
+        
+        for i in range(self.num_action_history):
+            new_states[:,16+4*self.gates_ahead+4*i:16+4*self.gates_ahead+4*i+4] = self.action_hist[:,i]
+        
+        # update state history
         self.state_hist = np.roll(self.state_hist, 1, axis=1)
         self.state_hist[:,0] = new_states
+
         
         # print('new_states \n', new_states)
         
-        # stack history up to self.input_hist
-        self.states = self.state_hist[:,0:self.input_hist].reshape((self.num_envs,-1))
+        # stack history up to self.num_state_history
+        self.states = self.state_hist[:,0:self.num_state_history+1].reshape((self.num_envs,-1))
         # print('states \n', self.states)
 
     def reset_(self, dones):
