@@ -16,10 +16,3 @@ if __name__ == "__main__":
         run_tmux_session(session_name, command)
     
     print(f'Running {len(architectures)} parallel training sessions')
-    
-    # periodically check the status of the training sessions
-    while True:
-        os.system("tmux ls")
-        print("Press Ctrl+C to stop")
-        # check every 10 seconds
-        time.sleep(10)

@@ -160,10 +160,6 @@ name = args.name
 # check if model already exists
 if os.path.exists(models_dir + '/' + name):
     print(f"Model {name} already exists. Do you want to overwrite it (this will delete the existing model/logs/videos)? (y/n)")
-    response = input()
-    if response.lower() != 'y':
-        print("Exiting...")
-        exit(1)
     
     import shutil
     if os.path.exists(log_dir + '/' + name + '_0'):
