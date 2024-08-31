@@ -10,6 +10,23 @@ from quad_race_env import *
 from randomization import *
 from quadcopter_animation import animation
 
+import argparse
+
+parser = argparse.ArgumentParser(description="Training session configuration")
+
+# Name of the training session
+# parser.add_argument('--name', type=str, required=True, help='Name of the training session')
+parser.add_argument('name', type=str, help='Name of the training session')
+
+# Architecture of the policy (list of integers)
+parser.add_argument('--pi', type=int, nargs='+', default=[64, 64], help='Architecture of the policy (e.g., --pi 64 64). Default is [64, 64]')
+
+# Architecture of the value function (list of integers)
+parser.add_argument('--vf', type=int, nargs='+', default=[64, 64], help='Architecture of the value function (e.g., --vf 64 64). Default is [64, 64]')
+
+# Parse the arguments
+args = parser.parse_args()
+
 
 # DEFINE RACE TRACK
 r = 1.5
@@ -27,9 +44,9 @@ gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
 start_pos = gate_pos[0] + np.array([0,-1.,0])
 
 # SETUP LOGGING
-models_dir = 'models/DR_E2E'
-log_dir = 'logs/DR_E2E'
-video_log_dir = 'videos/DR_E2E'
+models_dir = 'models/ICRA2025'
+log_dir = 'logs/ICRA2025'
+video_log_dir = 'videos/ICRA2025'
 
 if not os.path.exists(models_dir):
     os.makedirs(models_dir)
@@ -64,7 +81,8 @@ test_env = Quadcopter3DGates(
 env = VecMonitor(env)
 
 # MODEL DEFINITION
-policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=[64,64], vf=[64,64])], log_std_init = 0)
+# policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=[64,64], vf=[64,64])], log_std_init = 0)
+policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=args.pi, vf=args.vf)], log_std_init = 0)
 model = PPO(
     "MlpPolicy",
     env,
@@ -76,6 +94,14 @@ model = PPO(
     n_epochs=10,
     gamma=0.999
 )
+
+print("Model created with policy architecture", args.pi, "and value function architecture", args.vf)
+print("-----------------------------------")
+print(model.policy)
+print("-----------------------------------")
+print("Logging to", log_dir)
+print("Saving models to", models_dir)
+print("Saving videos to", video_log_dir)
 
 # ANIMATION FUNCTION
 # def animate_policy(model, env, deterministic=False, log_times=False, print_vel=False, log=None, **kwargs):
@@ -111,6 +137,7 @@ def train(model, test_env, log_name, n=int(1e8)):
         time_steps = model.num_timesteps
         # save model
         model.save(models_dir + '/' + log_name + '/' + str(time_steps))
+        print('Model saved at', models_dir + '/' + log_name + '/' + str(time_steps))
         # save policy animation
         # animate_policy(
         #     model,
@@ -128,17 +155,26 @@ def train(model, test_env, log_name, n=int(1e8)):
 # shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
 
 # RUN TRAINING LOOP
-# get name from the passed arguments
-if len(sys.argv) > 1:
-    name = sys.argv[1]
+name = args.name
 
-    # delete
-    import shutil
-    shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
-    shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
-    shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
+# check if model already exists
+if os.path.exists(models_dir + '/' + name):
+    print(f"Model {name} already exists. Do you want to overwrite it (this will delete the existing model/logs/videos)? (y/n)")
+    response = input()
+    if response.lower() != 'y':
+        print("Exiting...")
+        exit(1)
     
-    train(model, test_env, name)
-else:
-    print('Please provide a name for the training run.')
-    sys.exit(1)
+    import shutil
+    if os.path.exists(log_dir + '/' + name + '_0'):
+        print("Deleting logs...")
+        shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
+    if os.path.exists(models_dir + '/' + name):
+        print("Deleting models...")
+        shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
+    if os.path.exists(video_log_dir + '/' + name):
+        print("Deleting videos...")
+        shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
+
+print("Training model", name)
+train(model, test_env, name)
