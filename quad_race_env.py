@@ -102,9 +102,47 @@ f = [d_x, d_y, d_z, d_vx, d_vy, d_vz, d_phi, d_theta, d_psi, d_p, d_q, d_r, d_w1
 # lambdify
 f_func = lambdify((Array(state), Array(control), Array(params)), Array(f), 'numpy')
 
+# PARAMETER ENCODING (used for parameter input)
+# normalize thrust and moment constants by scaling with w_max
+k_wn = k_w*(w_max**2)
+k_pn = (k_p1 + k_p2 + k_p3 + k_p4)/4 * (w_max**2)
+k_qn = (k_q1 + k_q2 + k_q3 + k_q4)/4 * (w_max**2)
+k_rn = (k_r1 + k_r2 + k_r3 + k_r4)/4 * (w_max)
+k_rdn = (k_r5 + k_r6 + k_r7 + k_r8)/4 * (w_max)
+
+# normalize to [-1,1] based on min and max expected values
+normalize = lambda x, x_min, x_max: 2*(x - x_min)/(x_max - x_min) - 1
+k_w_encoding    = normalize(k_wn,       1.0e+01,    3.0e+01)
+k_p_encoding    = normalize(k_pn,       2.0e+02,    8.0e+02)
+k_q_encoding    = normalize(k_qn,       2.0e+02,    8.0e+02)
+k_r_encoding    = normalize(k_rn,       2.0e+01,    8.0e+01)
+k_rd_encoding   = normalize(k_rdn,      2.0e+00,    8.0e+00)
+k_encoding      = normalize(k,          0.,         1.)
+tau_encoding    = normalize(tau,        0.01,       0.1)
+w_min_encoding  = normalize(w_min,      0,          500)
+w_max_encoding  = normalize(w_max,      3000,       5000)
+
+# lambdify
+param_encoding = lambdify((Array(params),), Array([k_w_encoding, k_p_encoding, k_q_encoding, k_r_encoding, k_rd_encoding, k_encoding, tau_encoding, w_min_encoding, w_max_encoding]), 'numpy')
+
 # Efficient vectorized version of the environment
 from gymnasium import spaces
 from stable_baselines3.common.vec_env import VecEnv
+
+# DEFINE RACE TRACK
+r = 1.5
+gate_pos = np.array([
+    [ r,  -r, -1.5],
+    [ 0,   0, -1.5],
+    [-r,   r, -1.5],
+    [ 0, 2*r, -1.5],
+    [ r,   r, -1.5],
+    [ 0,   0, -1.5],
+    [-r,  -r, -1.5],
+    [ 0,-2*r, -1.5]
+])
+gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
+start_pos = gate_pos[0] + np.array([0,-1.,0])
 
 class Quadcopter3DGates(VecEnv):
     def __init__(self,
@@ -120,6 +158,7 @@ class Quadcopter3DGates(VecEnv):
                  num_state_history=0,
                  num_action_history=0,
                  param_input=False,
+                 param_input_noise=0.
                  ):
         
         # Define the race track
@@ -154,6 +193,14 @@ class Quadcopter3DGates(VecEnv):
         self.num_state_history = num_state_history
         self.num_action_history = num_action_history
         
+        # param input
+        self.param_input = param_input
+        self.param_input_noise = param_input_noise
+        # compute encoding with noise on the params
+        if self.param_input:
+            params_with_noise = self.params*np.random.uniform(1-self.param_input_noise, 1+self.param_input_noise, size=self.params.shape)
+            self.param_encoding = param_encoding(params_with_noise.T).T
+            
         # Calculate relative gates
         # pos,yaw of gate i in reference frame of gate i-1 (assumes a looped track)
         self.gate_pos_rel = np.zeros((self.num_gates,3), dtype=np.float32)
@@ -185,7 +232,7 @@ class Quadcopter3DGates(VecEnv):
         # observation space: pos[G], vel[G], att[eulerB->G], rates[B], rpms, future_gates[G], future_gate_dirs[G]
         # [G] = reference frame aligned with target gate
         # [B] = body frame
-        self.state_len = 16+4*self.gates_ahead+4*self.num_action_history
+        self.state_len = 16+4*self.gates_ahead+4*self.num_action_history+9*self.param_input
         self.obs_len = self.state_len*(1+self.num_state_history)
         observation_space = spaces.Box(
             low  = np.array([-np.inf]*self.obs_len),
@@ -275,6 +322,10 @@ class Quadcopter3DGates(VecEnv):
         for i in range(self.num_action_history):
             new_states[:,16+4*self.gates_ahead+4*i:16+4*self.gates_ahead+4*i+4] = self.action_hist[:,i]
         
+        # update param encoding
+        if self.param_input:
+            new_states[:,16+4*self.gates_ahead+4*self.num_action_history:] = self.param_encoding
+            
         # update state history
         self.state_hist = np.roll(self.state_hist, 1, axis=1)
         self.state_hist[:,0] = new_states
@@ -305,10 +356,12 @@ class Quadcopter3DGates(VecEnv):
             # y0 += np.random.uniform(-0.5,0.5, size=(num_reset,))
             # z0 += np.random.uniform(-0.5,0.5, size=(num_reset,))
         else:
+            # set target gates to 0
+            self.target_gates[dones] = np.zeros(num_reset, dtype=int)
             # use start_pos
-            x0 = np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[0]
-            y0 = np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[1]
-            z0 = np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[2]
+            x0 = 0*np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[0]
+            y0 = 0*np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[1]
+            z0 = 0*np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[2]
         
         vx0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
         vy0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
@@ -331,10 +384,13 @@ class Quadcopter3DGates(VecEnv):
 
         self.step_counts[dones] = np.zeros(num_reset)
         
-        # self.target_gates[dones] = np.zeros(num_reset, dtype=int)
-        
         # update params (domain randomization)
         self.params[dones] = self.randomization(num_reset)
+        
+        # update param encoding (used for parameter input)
+        if self.param_input:
+            params_with_noise = self.params[dones]*np.random.uniform(1-self.param_input_noise, 1+self.param_input_noise, size=self.params[dones].shape)
+            self.param_encoding[dones] = param_encoding(params_with_noise.T).T            
         
         # update states
         self.update_states()

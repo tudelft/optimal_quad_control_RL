@@ -17,7 +17,12 @@ params_normalized_5inch = {
 'w_min': 238.49, 'w_max': 3295.50, 'k': 0.95, 'tau': 0.04
 }
 randomization_fixed_params_5inch = lambda num: {key: np.repeat(value, num) for key, value in params_5inch.items()}
-
+# 10% randomization - uniform distribution between 0.9 and 1.1 of the original value. However, for k we must ensure that it is between 0 and 1
+randomization_5inch_10_percent = lambda num: {key: np.random.uniform(value*0.9, value*1.1, num) if key != 'k' else np.random.uniform(value*0.9, min(value*1.1, 1), num) for key, value in params_5inch.items()}
+# 20% randomization
+randomization_5inch_20_percent = lambda num: {key: np.random.uniform(value*0.8, value*1.2, num) if key != 'k' else np.random.uniform(value*0.8, min(value*1.2, 1), num) for key, value in params_5inch.items()}
+# 30% randomization
+randomization_5inch_30_percent = lambda num: {key: np.random.uniform(value*0.7, value*1.3, num) if key != 'k' else np.random.uniform(value*0.7, min(value*1.3, 1), num) for key, value in params_5inch.items()}
 
 # from analyze_flight_data/SystemIdentification.ipynb
 # 3inch drone:
@@ -36,6 +41,12 @@ params_normalized_3inch = {
 'w_min': 305.40, 'w_max': 4887.57, 'k': 0.84, 'tau': 0.04
 }
 randomization_fixed_params_3inch = lambda num: {key: np.repeat(value, num) for key, value in params_3inch.items()}
+# 10% randomization - uniform distribution between 0.9 and 1.1 of the original value. However, for k we must ensure that it is between 0 and 1
+randomization_3inch_10_percent = lambda num: {key: np.random.uniform(value*0.9, value*1.1, num) if key != 'k' else np.random.uniform(value*0.9, min(value*1.1, 1), num) for key, value in params_3inch.items()}
+# 20% randomization
+randomization_3inch_20_percent = lambda num: {key: np.random.uniform(value*0.8, value*1.2, num) if key != 'k' else np.random.uniform(value*0.8, min(value*1.2, 1), num) for key, value in params_3inch.items()}
+# 30% randomization
+randomization_3inch_30_percent = lambda num: {key: np.random.uniform(value*0.7, value*1.3, num) if key != 'k' else np.random.uniform(value*0.7, min(value*1.3, 1), num) for key, value in params_3inch.items()}
 
 def randomization_big(num):
     # returns randomized parameters based on robin and till's values

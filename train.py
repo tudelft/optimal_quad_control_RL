@@ -15,8 +15,10 @@ import argparse
 parser = argparse.ArgumentParser(description="Training session configuration")
 
 # Name of the training session
-# parser.add_argument('--name', type=str, required=True, help='Name of the training session')
-parser.add_argument('name', type=str, help='Name of the training session')
+parser.add_argument('session_name', type=str, help='Name of the training session')
+
+# Name of the model
+parser.add_argument('name', type=str, help='Name of the model')
 
 # Architecture of the policy (list of integers)
 parser.add_argument('--pi', type=int, nargs='+', default=[64, 64], help='Architecture of the policy (e.g., --pi 64 64). Default is [64, 64]')
@@ -33,8 +35,26 @@ parser.add_argument('--action_history', type=int, default=0, help='Action histor
 # Param input (boolean, default is False)
 parser.add_argument('--param_input', action='store_true', help='Use parameter input')
 
+# Param input noise (default = 0.0)
+parser.add_argument('--param_input_noise', type=float, default=0.0, help='Parameter input noise')
+
+# Randomization (randomized, fixed_5inch, fixed_3inch)
+parser.add_argument('--randomization', type=str, default='randomized', help='Randomization (randomized, fixed_5inch, fixed_3inch)')
+
 # Parse the arguments
 args = parser.parse_args()
+
+# print summary of the arguments
+print("Training session configuration:")
+print(f"Session name: {args.session_name}")
+print(f"Model name: {args.name}")
+print(f"Policy architecture: {args.pi}")
+print(f"Value function architecture: {args.vf}")
+print(f"State history input length: {args.state_history}")
+print(f"Action history input length: {args.action_history}")
+print(f"Parameter input: {args.param_input}")
+print(f"Parameter input noise: {args.param_input_noise}")
+print(f"Randomization: {args.randomization}")
 
 
 # DEFINE RACE TRACK
@@ -53,9 +73,9 @@ gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
 start_pos = gate_pos[0] + np.array([0,-1.,0])
 
 # SETUP LOGGING
-models_dir = 'models/ICRA2025'
-log_dir = 'logs/ICRA2025'
-video_log_dir = 'videos/ICRA2025'
+models_dir = 'models/'+args.session_name
+log_dir = 'logs/'+args.session_name
+video_log_dir = 'videos/'+args.session_name
 
 if not os.path.exists(models_dir):
     os.makedirs(models_dir)
@@ -68,25 +88,52 @@ if not os.path.exists(video_log_dir):
 datetime_str = datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # CREATE ENVIRONMENTS
+if args.randomization == 'randomized':
+    randomization = randomization_big
+elif args.randomization == 'fixed_5inch':
+    randomization = randomization_fixed_params_5inch
+elif args.randomization == '5inch_10_percent':
+    randomization = randomization_5inch_10_percent
+elif args.randomization == '5inch_20_percent':
+    randomization = randomization_5inch_20_percent
+elif args.randomization == '5inch_30_percent':
+    randomization = randomization_5inch_30_percent
+elif args.randomization == 'fixed_3inch':
+    randomization = randomization_fixed_params_3inch
+elif args.randomization == '3inch_10_percent':
+    randomization = randomization_3inch_10_percent
+elif args.randomization == '3inch_20_percent':
+    randomization = randomization_3inch_20_percent
+elif args.randomization == '3inch_30_percent':
+    randomization = randomization_3inch_30_percent
+else:
+    print("Randomization not recognized")
+    # kill the process
+    sys.exit()
+
 env = Quadcopter3DGates(
     num_envs=100,
     gates_pos=gate_pos,
     gate_yaw=gate_yaw,
     start_pos=start_pos,
-    randomization=randomization_big,
+    randomization=randomization,
     gates_ahead=1, 
     num_state_history=args.state_history,
     num_action_history=args.action_history,
+    param_input=args.param_input,
+    param_input_noise=args.param_input_noise
 )
 test_env = Quadcopter3DGates(
     num_envs=10,
     gates_pos=gate_pos,
     gate_yaw=gate_yaw,
     start_pos=start_pos,
-    randomization=randomization_big,
+    randomization=randomization,
     gates_ahead=1,
     num_state_history=args.state_history,
     num_action_history=args.action_history,
+    param_input=args.param_input,
+    param_input_noise=args.param_input_noise
 )
 
 # Wrap the environment in a Monitor wrapper
@@ -174,19 +221,19 @@ def train(model, test_env, log_name, n=int(1e8)):
 name = args.name
 
 # check if model already exists
-if os.path.exists(models_dir + '/' + name):
-    print(f"Model {name} already exists. Do you want to overwrite it (this will delete the existing model/logs/videos)? (y/n)")
+# if os.path.exists(models_dir + '/' + name):
+#     print(f"Model {name} already exists. Do you want to overwrite it (this will delete the existing model/logs/videos)? (y/n)")
     
-    import shutil
-    if os.path.exists(log_dir + '/' + name + '_0'):
-        print("Deleting logs...")
-        shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
-    if os.path.exists(models_dir + '/' + name):
-        print("Deleting models...")
-        shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
-    if os.path.exists(video_log_dir + '/' + name):
-        print("Deleting videos...")
-        shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
+import shutil
+if os.path.exists(log_dir + '/' + name + '_0'):
+    print("Deleting logs...")
+    shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
+if os.path.exists(models_dir + '/' + name):
+    print("Deleting models...")
+    shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
+if os.path.exists(video_log_dir + '/' + name):
+    print("Deleting videos...")
+    shutil.rmtree(video_log_dir + '/' + name, ignore_errors=True)
 
 print("Training model", name)
 train(model, test_env, name)
