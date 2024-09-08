@@ -157,6 +157,7 @@ class Quadcopter3DGates(VecEnv):
                  initialize_at_random_gates=True,
                  num_state_history=0,
                  num_action_history=0,
+                 history_step_size=1,
                  param_input=False,
                  param_input_noise=0.
                  ):
@@ -192,6 +193,7 @@ class Quadcopter3DGates(VecEnv):
         # state, action history
         self.num_state_history = num_state_history
         self.num_action_history = num_action_history
+        self.history_step_size = history_step_size
         
         # param input
         self.param_input = param_input
@@ -247,7 +249,7 @@ class Quadcopter3DGates(VecEnv):
         # observation state
         self.states = np.zeros((num_envs,self.obs_len), dtype=np.float32)
         # state history tracking
-        num_hist = 10
+        num_hist = 40
         self.state_hist = np.zeros((num_envs,num_hist,self.state_len), dtype=np.float32)
         # action history tracking
         self.action_hist = np.zeros((num_envs,num_hist,4), dtype=np.float32)
@@ -320,7 +322,7 @@ class Quadcopter3DGates(VecEnv):
         self.action_hist[:,0] = self.actions
         
         for i in range(self.num_action_history):
-            new_states[:,16+4*self.gates_ahead+4*i:16+4*self.gates_ahead+4*i+4] = self.action_hist[:,i]
+            new_states[:,16+4*self.gates_ahead+4*i:16+4*self.gates_ahead+4*i+4] = self.action_hist[:,(i+1)*self.history_step_size-1]
         
         # update param encoding
         if self.param_input:
@@ -334,7 +336,7 @@ class Quadcopter3DGates(VecEnv):
         # print('new_states \n', new_states)
         
         # stack history up to self.num_state_history
-        self.states = self.state_hist[:,0:self.num_state_history+1].reshape((self.num_envs,-1))
+        self.states = self.state_hist[:,0:(self.num_state_history+1)*self.history_step_size:self.history_step_size].reshape((self.num_envs,-1))
         # print('states \n', self.states)
 
     def reset_(self, dones):

@@ -32,6 +32,9 @@ parser.add_argument('--state_history', type=int, default=0, help='State history 
 # Action history input length (default is 0)
 parser.add_argument('--action_history', type=int, default=0, help='Action history input length (default is 0)')
 
+# History step size (default is 1)
+parser.add_argument('--history_step_size', type=int, default=1, help='History step size (default is 1)')
+
 # Param input (boolean, default is False)
 parser.add_argument('--param_input', action='store_true', help='Use parameter input')
 
@@ -52,6 +55,7 @@ print(f"Policy architecture: {args.pi}")
 print(f"Value function architecture: {args.vf}")
 print(f"State history input length: {args.state_history}")
 print(f"Action history input length: {args.action_history}")
+print(f"History step size: {args.history_step_size}")
 print(f"Parameter input: {args.param_input}")
 print(f"Parameter input noise: {args.param_input_noise}")
 print(f"Randomization: {args.randomization}")
@@ -120,11 +124,12 @@ env = Quadcopter3DGates(
     gates_ahead=1, 
     num_state_history=args.state_history,
     num_action_history=args.action_history,
+    history_step_size=args.history_step_size,
     param_input=args.param_input,
     param_input_noise=args.param_input_noise
 )
 test_env = Quadcopter3DGates(
-    num_envs=10,
+    num_envs=1,
     gates_pos=gate_pos,
     gate_yaw=gate_yaw,
     start_pos=start_pos,
@@ -132,6 +137,7 @@ test_env = Quadcopter3DGates(
     gates_ahead=1,
     num_state_history=args.state_history,
     num_action_history=args.action_history,
+    history_step_size=args.history_step_size,
     param_input=args.param_input,
     param_input_noise=args.param_input_noise
 )
@@ -189,6 +195,21 @@ print("Saving videos to", video_log_dir)
     
 # animate untrained policy (use this to set the recording camera position)
 # animate_policy(model, test_env)
+
+# TESTING
+test_env.reset()
+
+# do 100 steps and print state and action
+for i in range(100):
+    print('step', i)
+    num = test_env.num_state_history+1
+    state_len = int(len(test_env.states[0])/num)
+    for j in range(num):
+        print('state', j, '=', test_env.states[0][j*state_len:(j+1)*state_len])
+    actions, _ = model.predict(test_env.states, deterministic=True)
+    states, rewards, dones, infos = test_env.step(actions)
+    print('actions=', actions[0])
+    print('')
     
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
