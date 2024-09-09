@@ -161,7 +161,7 @@ cython_debug/
 
 # big data folders
 datasets/
-Figures/
+figures/
 models/
 logs/
 videos/

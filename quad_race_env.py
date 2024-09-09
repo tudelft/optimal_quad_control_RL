@@ -159,8 +159,14 @@ class Quadcopter3DGates(VecEnv):
                  num_action_history=0,
                  history_step_size=1,
                  param_input=False,
-                 param_input_noise=0.
+                 param_input_noise=0.,
+                 seed=None
                  ):
+        # set seed
+        self.seed = seed
+        if self.seed is not None:
+            np.random.seed(self.seed)
+            torch.manual_seed(self.seed)
         
         # Define the race track
         self.start_pos = start_pos.astype(np.float32)
@@ -202,7 +208,7 @@ class Quadcopter3DGates(VecEnv):
         if self.param_input:
             params_with_noise = self.params*np.random.uniform(1-self.param_input_noise, 1+self.param_input_noise, size=self.params.shape)
             self.param_encoding = param_encoding(params_with_noise.T).T
-            
+                        
         # Calculate relative gates
         # pos,yaw of gate i in reference frame of gate i-1 (assumes a looped track)
         self.gate_pos_rel = np.zeros((self.num_gates,3), dtype=np.float32)
@@ -267,6 +273,11 @@ class Quadcopter3DGates(VecEnv):
         self.update_states = self.update_states_gate
         
         self.pause = False
+    
+    def reset_seed(self):
+        if self.seed is not None:
+            np.random.seed(self.seed)
+            torch.manual_seed(self.seed)
 
     def update_states_gate(self):
         # Transform pos and vel in gate frame
