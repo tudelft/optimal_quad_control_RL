@@ -166,5 +166,8 @@ models/
 logs/
 videos/
 flight_data/
-output.mp4
 c_code/
+# everything that ends with .csv, .mp4, .npz
+*.csv
+*.mp4
+*.npz
