@@ -1,0 +1,22 @@
+name: quad
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - anaconda
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pytorch-cuda
+  - pytorch
+  - torchvision
+  - pip
+  - pip:
+    - numpy
+    - scipy
+    - tensorboard
+    - stable-baselines3
+    - opencv-python
+    - setuptools
+    - wheel

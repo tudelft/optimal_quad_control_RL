@@ -23,20 +23,20 @@ if __name__ == "__main__":
     #         run_tmux_session(model_name, command)
     
     # State history experiments
-    # for i in [1,2,3]:
-    #     for j in range(3):
-    #         session_name = 'input_comparison'
-    #         model_name = f"run{j}_state_history{i}_step_size=10"
-    #         command = f'python train.py {session_name} {model_name} --pi 64 64 64 --vf 64 64 64 --state_history {i} --history_step_size 10'
-    #         run_tmux_session(model_name, command)
-    
-    # Action history experiments
     for i in [1,2,3]:
         for j in range(3):
             session_name = 'input_comparison'
-            model_name = f"run{j}_action_history{i}_step_size=10"
-            command = f'python train.py {session_name} {model_name} --pi 64 64 64 --vf 64 64 64 --action_history {i} --history_step_size 10'
+            model_name = f"run{j}_state_history{i}_step_size=10"
+            command = f'python train.py {session_name} {model_name} --pi 64 64 64 --vf 64 64 64 --state_history {i} --history_step_size 10'
             run_tmux_session(model_name, command)
+    
+    # Action history experiments
+    # for i in [1,2,3]:
+    #     for j in range(3):
+    #         session_name = 'input_comparison'
+    #         model_name = f"run{j}_action_history{i}_step_size=10"
+    #         command = f'python train.py {session_name} {model_name} --pi 64 64 64 --vf 64 64 64 --action_history {i} --history_step_size 10'
+    #         run_tmux_session(model_name, command)
 
 # open tensorboard
 os.system(f"tensorboard --logdir logs/{session_name}")
