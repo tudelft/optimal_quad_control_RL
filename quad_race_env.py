@@ -541,4 +541,4 @@ class Quadcopter3DGates(VecEnv):
         state_dict = dict(zip(['x','y','z','vx','vy','vz','phi','theta','psi','p','q','r','w1','w2','w3','w4'], self.world_states.T))
         # Rescale actions to [0,1] for rendering
         action_dict = dict(zip(['u1','u2','u3','u4'], (np.array(self.actions.T)+1)/2))
-        return {**state_dict, **action_dict}``
+        return {**state_dict, **action_dict}

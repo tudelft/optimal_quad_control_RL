@@ -242,6 +242,15 @@ def animate(t, x, y, z, phi, theta, psi, u,
     draw_forces=False
     record=False
     
+    if 'follow' in kwargs:
+        follow = kwargs['follow']
+    if 'auto_play' in kwargs:
+        auto_play = kwargs['auto_play']
+    if 'draw_path' in kwargs:
+        draw_path = kwargs['draw_path']
+    if 'draw_forces' in kwargs:
+        draw_forces = kwargs['draw_forces']
+    
     traj_index = 0
     
     if simultaneous:
@@ -300,6 +309,13 @@ def animate(t, x, y, z, phi, theta, psi, u,
             time_index = cv2.getTrackbarPos('t', 'animation')
             current_time = t_[time_index]
 
+        if 'record_time' in kwargs:
+            if t_[time_index] >= kwargs['record_time']:
+                if record:
+                    print('recording ended')
+                    out.release()
+                    print('recording saved in ' + file)
+                break
         
         drone.translate(pos[time_index] - drone.pos)
         drone.rotate(ori[time_index])
@@ -314,13 +330,6 @@ def animate(t, x, y, z, phi, theta, psi, u,
 
         # using screen resolution of width x height
         frame = 255*np.ones((height, width, 3), dtype=np.uint8)
-
-        # text
-        cv2.putText(frame, "t = " + str(round(t_[time_index], 2)), (10, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
-        if multiple_trajectories:
-            cv2.putText(frame, "i = " + str(traj_index), (100, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
 
         # drawing
         big_grid.draw(frame, cam, color=(200, 200, 200), pt=1)
@@ -389,7 +398,19 @@ def animate(t, x, y, z, phi, theta, psi, u,
             gate.rotate([0,0,gyaw])
             gate_collision_box.rotate([0,0,gyaw])
             gate.draw(frame, cam, color=(0,140,255), pt=4)
-            
+        
+        # text
+        cv2.putText(frame, "t = " + str(round(t_[time_index], 2)), (10, 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+        # if multiple_trajectories:
+        #     cv2.putText(frame, "i = " + str(traj_index), (100, 20),
+        #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+        
+        # title at the top in the middle
+        if 'title' in kwargs:
+            cv2.putText(frame, kwargs['title'], (300, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), thickness=2)
+        
+        
         for i in range(len(names)):
             if len(colors)>i:
                 cv2.putText(frame, names[i], (700, 20*(i+1)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colors[i], thickness=2)
@@ -401,6 +422,7 @@ def animate(t, x, y, z, phi, theta, psi, u,
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
 
         control = cv2.waitKeyEx(1)
+        
         if control == 106 and multiple_trajectories:      # J KEY
             time_index = 0
             start_time = time.time() - t_[time_index]
@@ -419,6 +441,9 @@ def animate(t, x, y, z, phi, theta, psi, u,
             ori = np.stack([phi[traj_index],theta[traj_index],psi[traj_index]]).T
             u_ = u[traj_index]
             path = graphics.create_path([p for p in pos[0::5]])
+        if 'record' in kwargs:
+            if kwargs['record'] and not record:
+                control = 114                
         if control == 114:      # R KEY
             if record:
                 print('recording ended')
