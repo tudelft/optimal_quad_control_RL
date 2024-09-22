@@ -105,6 +105,8 @@ def view(get_drone_state=get_drone_state_zero,
         cv2.setMouseCallback('animation', cam.mouse_control)
 
     while True:
+        # ugly hack
+        cam.rotate([0., 0, 0.005])
         # keep track of steps
         steps += 1
         if 0 < record_steps < steps:
@@ -285,6 +287,9 @@ def animate(t, x, y, z, phi, theta, psi, u,
     video_step = 1
     
     while True:
+        # ugly hack
+        cam.rotate([0., 0, 0.005])
+        
         if auto_play:
             if record:
                 if time_index<len(t_)-video_step:
