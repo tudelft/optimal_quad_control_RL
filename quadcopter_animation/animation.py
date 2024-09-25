@@ -7,12 +7,14 @@ import os
 # screen resolution
 width = 864
 height = 700 #864
+f=1.e+3
+f=500
 
 # graphics
 cam = graphics.Camera(
     pos=np.array([-5., 0., 0.]),
     theta=np.zeros(3),
-    cameraMatrix=np.array([[1.e+3, 0., width/2], [0., 1.e+3, height/2], [0., 0., 1.]]),
+    cameraMatrix=np.array([[f, 0., width/2], [0., f, height/2], [0., 0., 1.]]),
     distCoeffs=np.array([0., 0., 0., 0., 0.])
 )
 cam.r[0] = -12.
@@ -79,11 +81,14 @@ def view(get_drone_state=get_drone_state_zero,
          record_file='output.mp4',
          show_window=True,
          hist_len=100,
+         cam_angle=0.,
          ):
     follow=False
     record=False
     draw_forces=True
     draw_path=False
+    drone_cam = False
+    pause = True
     
     # posistion history
     pos_hist = []
@@ -108,6 +113,11 @@ def view(get_drone_state=get_drone_state_zero,
     if show_window:
         cv2.namedWindow('animation')
         cv2.setMouseCallback('animation', cam.mouse_control)
+    
+    # get initial drone state
+    state = get_drone_state()
+    
+    last_time = time.time()
 
     while True:
         # ugly hack
@@ -119,9 +129,17 @@ def view(get_drone_state=get_drone_state_zero,
             out.release()
             print('recording saved in ' + record_file)
             break
+        
+        # make sure the loop is fps fps
+        current_time = time.time()
+        elapsed_time = current_time - last_time
+        if elapsed_time < 1/fps:
+            time.sleep(1/fps - elapsed_time)
+        last_time = time.time()
 
         # get drone state
-        state = get_drone_state()
+        if not pause:
+            state = get_drone_state()
 
         pos = np.stack([state['x'], state['y'], state['z']]).T
         ori = np.stack([state['phi'], state['theta'], state['psi']]).T
@@ -136,6 +154,11 @@ def view(get_drone_state=get_drone_state_zero,
             cam.set_center(drone.pos)
         else:
             cam.set_center(np.zeros(3))
+            
+        # drone camera
+        if drone_cam:
+            cam.pos = drone.vertices[-1] # camera point is the last vertex of the drone
+            cam.set_rotation([drone.theta[0], drone.theta[1]+cam_angle, drone.theta[2]])
 
         # using screen resolution of width x height
         frame = 255*np.ones((height, width, 3), dtype=np.uint8)
@@ -155,29 +178,32 @@ def view(get_drone_state=get_drone_state_zero,
             drone.translate(pos-drone.pos)
             drone.rotate(ori)
             graphics.set_thrust(drone, forces, u*scl)
-            # draw drone
-            drone.draw(frame, cam, color=(255, 0, 0), pt=2)
+            
+            if not drone_cam:
+                # draw drone
+                drone.draw(frame, cam, color=(255, 0, 0), pt=2)
 
-            # draw forces
-            if draw_forces:
-                for force in forces:
-                    force.draw(frame, cam, color=(0, 0, 255), pt=2)
+                # draw forces
+                if draw_forces:
+                    for force in forces:
+                        force.draw(frame, cam, color=(0, 0, 255), pt=2)
         else: # multiple drones
             for i in range(pos.shape[0]):
                 drone.translate(pos[i]-drone.pos)
                 drone.rotate(ori[i])
                 graphics.set_thrust(drone, forces, u[i]*scl)
 
-                # draw drone
-                if 'color' in state and len(state['color']) > i:
-                    drone.draw(frame, cam, color=state['color'][i], pt=2)
-                else:
-                    drone.draw(frame, cam, color=(255, 0, 0), pt=2)
+                if not drone_cam:
+                    # draw drone
+                    if 'color' in state and len(state['color']) > i:
+                        drone.draw(frame, cam, color=state['color'][i], pt=2)
+                    else:
+                        drone.draw(frame, cam, color=(255, 0, 0), pt=2)
 
-                # draw forces
-                if draw_forces:
-                    for force in forces:
-                        force.draw(frame, cam, color=(0, 0, 255), pt=2)
+                    # draw forces
+                    if draw_forces:
+                        for force in forces:
+                            force.draw(frame, cam, color=(0, 0, 255), pt=2)
         
         # draw path
         if draw_path:
@@ -227,6 +253,14 @@ def view(get_drone_state=get_drone_state_zero,
         # draw forces when s is pressed
         elif key == ord('s'):
             draw_forces = not draw_forces
+        # show drone cam image when d is pressed
+        elif key == ord('d'):
+            if drone_cam:
+                cam.pos = np.array([-100., 0., 0.])
+                cam.theta = np.zeros(3)
+                cam.r[0] = -15.
+                cam.rotate([0., -np.pi/2, 0.])
+            drone_cam = not drone_cam
         # zoom in with 1
         elif key == ord('1'):
             cam.zoom(1.05)
@@ -245,6 +279,13 @@ def view(get_drone_state=get_drone_state_zero,
         # if p is pressed draw path
         elif key == ord('p'):
             draw_path = not draw_path
+        # if space is pressed pause
+        elif key == 32:
+            pause = not pause
+            if pause:
+                print('paused')
+            else:
+                print('unpaused')
         
         # show
         if show_window:

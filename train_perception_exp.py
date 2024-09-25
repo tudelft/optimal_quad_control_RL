@@ -11,21 +11,21 @@ from randomization import *
 from quadcopter_animation import animation
 
 # SETUP LOGGING
-session_name = 'ground_exp'
+session_name = 'perception_exp'
 models_dir = 'models/'+session_name
 log_dir = 'logs/'+session_name
 video_log_dir = 'videos/'+session_name
 
 env = Quadcopter3DGates(
     num_envs=100,
-    randomization=randomization_5inch_20_percent,
+    randomization=randomization_dummy_30_percent,
     initialize_at_random_gates=False,
     initialize_on_ground=True
 )
 
 test_env = Quadcopter3DGates(
     num_envs=1,
-    randomization=randomization_5inch_20_percent,
+    randomization=randomization_dummy_30_percent,
     initialize_at_random_gates=False,
     initialize_on_ground=True
 )
@@ -52,9 +52,10 @@ print("-----------------------------------")
 print(model.policy)
 print("-----------------------------------")
 
-print("overloading weights from models/nn_size_comparison/run1_64_64_64/98000000.zip")
+path_overload = "models/ground_exp/test1/100000000.zip"
+print("overloading weights from", path_overload)
 # model_old = PPO.load("models/nn_size_comparison/run1_64_64_64/98000000.zip")
-model_old = PPO.load("models/ground_exp/test1/100000000.zip")
+model_old = PPO.load(path_overload)
 model.policy.load_state_dict(model_old.policy.state_dict())
 print("-----------------------------------")
 print(model.policy)
@@ -88,7 +89,7 @@ def animate_policy(model, env, deterministic=False, log_times=False, print_vel=F
     animation.view(run, gate_pos=env.gate_pos, gate_yaw=env.gate_yaw, **kwargs)
     
 # animate untrained policy (use this to set the recording camera position)
-animate_policy(model, test_env)
+animate_policy(model, test_env, cam_angle=0)
     
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
@@ -104,7 +105,7 @@ def train(model, log_name, n=int(1e8)):
 
 
 # RUN TRAINING LOOP
-name = 'test2'
+name = 'test1'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):

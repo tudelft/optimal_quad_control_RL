@@ -114,7 +114,9 @@ gate_pos_B = R.T@(Matrix([gx,gy,gz]) - Matrix([x,y,z]))
 # get angle between optical_axis and gate_pos_B
 perc_angle = acos(optical_axis.dot(gate_pos_B)/(optical_axis.norm()*gate_pos_B.norm()))
 # lambdify
-get_perc_angle_func = lambda a: lambdify((Array(state), Array([gx,gy,gz])), Array(perc_angle.subs(cam_angle, a)), 'numpy')
+get_perc_angle_func = lambda a: lambdify((Array(state), Array([gx,gy,gz])), perc_angle.subs(cam_angle, a), 'numpy')
+print('test')
+print(get_perc_angle_func(0))
 
 # PARAMETER ENCODING (used for parameter input)
 # normalize thrust and moment constants by scaling with w_max
@@ -460,10 +462,12 @@ class Quadcopter3DGates(VecEnv):
         
         rat_penalty = 0.001*np.linalg.norm(new_states[:,9:12], axis=1)
         prog_rewards = d2g_old - d2g_new
-        # perception reward l2*exp(l3*perc_angle) l2=0.02, l3=-10.0
-        perc_angle = self.perc_angle_func(new_states.T, pos_gate.T).T
+        
+        # perception reward from (https://www.nature.com/articles/s41586-023-06419-4) l2*exp(l3*perc_angle) l2=0.02, l3=-10.0
+        perc_angle = self.perc_angle_func(new_states.T, pos_gate.T)
         perc_rewards = 0.02*np.exp(-10.0*perc_angle)
         
+        # raise ValueError('stop')
         rewards = prog_rewards - rat_penalty + perc_rewards
         
         # Gate passing/collision
@@ -565,4 +569,4 @@ class Quadcopter3DGates(VecEnv):
         state_dict = dict(zip(['x','y','z','vx','vy','vz','phi','theta','psi','p','q','r','w1','w2','w3','w4'], self.world_states.T))
         # Rescale actions to [0,1] for rendering
         action_dict = dict(zip(['u1','u2','u3','u4'], (np.array(self.actions.T)+1)/2))
-        return {**state_dict, **action_dict}
+        return {'dt': self.dt, **state_dict, **action_dict}

@@ -25,6 +25,23 @@ randomization_5inch_20_percent = lambda num: {key: np.random.uniform(value*0.8, 
 randomization_5inch_30_percent = lambda num: {key: np.random.uniform(value*0.7, value*1.3, num) if key != 'k' else np.random.uniform(value*0.7, min(value*1.3, 1), num) for key, value in params_5inch.items()}
 
 # from analyze_flight_data/SystemIdentification.ipynb
+# dummy drone:
+params_dummy = {
+'k_w': 1.94e-06, 'k_x': 5.67e-05, 'k_y': 6.59e-05,
+'k_p1': 5.53e-05, 'k_p2': 5.22e-05, 'k_p3': 5.28e-05, 'k_p4': 5.32e-05,
+'k_q1': 3.49e-05, 'k_q2': 4.63e-05, 'k_q3': 4.03e-05, 'k_q4': 3.81e-05,
+'k_r1': 9.56e-03, 'k_r2': 9.56e-03, 'k_r3': 9.56e-03, 'k_r4': 9.56e-03, 'k_r5': 1.87e-03, 'k_r6': 1.87e-03, 'k_r7': 1.87e-03, 'k_r8': 1.87e-03,
+'w_min': 258.92, 'w_max': 3342.82, 'k': 0.96, 'tau': 0.05
+}
+randomization_fixed_params_dummy = lambda num: {key: np.repeat(value, num) for key, value in params_dummy.items()}
+# 10% randomization - uniform distribution between 0.9 and 1.1 of the original value. However, for k we must ensure that it is between 0 and 1
+randomization_dummy_10_percent = lambda num: {key: np.random.uniform(value*0.9, value*1.1, num) if key != 'k' else np.random.uniform(value*0.9, min(value*1.1, 1), num) for key, value in params_dummy.items()}
+# 20% randomization
+randomization_dummy_20_percent = lambda num: {key: np.random.uniform(value*0.8, value*1.2, num) if key != 'k' else np.random.uniform(value*0.8, min(value*1.2, 1), num) for key, value in params_dummy.items()}
+# 30% randomization
+randomization_dummy_30_percent = lambda num: {key: np.random.uniform(value*0.7, value*1.3, num) if key != 'k' else np.random.uniform(value*0.7, min(value*1.3, 1), num) for key, value in params_dummy.items()}
+
+# from analyze_flight_data/SystemIdentification.ipynb
 # 3inch drone:
 params_3inch = {
 'k_w': 6.00e-07, 'k_x': 3.36e-05, 'k_y': 3.73e-05,

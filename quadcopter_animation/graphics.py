@@ -40,7 +40,11 @@ class Camera:
     def set_center(self, vector):
         self.center = vector
         self.pos = np.dot(self.rMat, self.r) + self.center
-
+        
+    def set_rotation(self, theta):
+        self.theta = theta
+        self.rMat = rotation_matrix(self.theta)
+        
     def rotate(self, theta):
         self.theta += theta
         self.rMat = rotation_matrix(self.theta)
@@ -192,6 +196,8 @@ def create_drone(r):
     l3 = create_path(np.array([[-2*r/4, -r/3, r/10], [-r,-r, 0.]]))
     l4 = create_path(np.array([[-2*r/4,  r/3, r/10], [-r, r, 0.]]))
     
+    l_extra = create_path(np.array([[0., 0., 0.], [20*r, 0., -20*r]]))
+    
     box = create_path(np.array([
         [ 2*r/4,  r/3, r/10],
         [ 2*r/4, -r/3, r/10],
@@ -206,12 +212,15 @@ def create_drone(r):
         [ 2*r/4,         -r/3, r/10]
     ]))
     
-    drone = group([c1, c2, c3, c4, l1, l2, l3, l4, l5, box])
+    drone = group([c1, c2, c3, c4, l1, l2, l3, l4, l5, box, l_extra])
     drone.vertices = np.concatenate([
         drone.vertices,
         np.array([[r, -r, 0.], [r, r, 0.], [-r, r, 0.], [-r, -r, 0.]])  # centers of the circles
     ])
-
+    
+    # extra vertex for camera mounting point
+    drone.vertices = np.concatenate([drone.vertices, np.array([[0, 0, 0.]])])
+    
     T1, T2, T3, T4 = drone.vertices[-4:]    # thrust on 4 positions
     #Fg = Force(drone.pos)                   # gravity acts on center of mass
     forces = Force(T1), Force(T2), Force(T3), Force(T4)  #, Fg
