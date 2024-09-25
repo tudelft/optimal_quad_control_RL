@@ -130,7 +130,7 @@ from gymnasium import spaces
 from stable_baselines3.common.vec_env import VecEnv
 
 # DEFINE RACE TRACK
-r = 1.5
+r = 2.0
 gate_pos = np.array([
     [ r,  -r, -1.5],
     [ 0,   0, -1.5],
@@ -142,7 +142,7 @@ gate_pos = np.array([
     [ 0,-2*r, -1.5]
 ])
 gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
-start_pos = gate_pos[0] + np.array([0,-1.,0])
+start_pos = gate_pos[0] + np.array([0,-r,0])
 
 class Quadcopter3DGates(VecEnv):
     def __init__(self,
@@ -155,6 +155,7 @@ class Quadcopter3DGates(VecEnv):
                  pause_if_collision=False,
                  motor_limit=1.0,
                  initialize_at_random_gates=True,
+                 initialize_on_ground=False,
                  num_state_history=0,
                  num_action_history=0,
                  history_step_size=1,
@@ -193,8 +194,9 @@ class Quadcopter3DGates(VecEnv):
         # Motor limit
         self.motor_limit = motor_limit
         
-        # Initialize at random gates
+        # Initialization
         self.initialize_at_random_gates = initialize_at_random_gates
+        self.initialize_on_ground = initialize_on_ground
 
         # state, action history
         self.num_state_history = num_state_history
@@ -363,11 +365,6 @@ class Quadcopter3DGates(VecEnv):
             
             pos = pos - np.array([np.cos(yaw), np.sin(yaw), np.zeros_like(yaw)]).T
             x0, y0, z0 = pos.T
-            
-            # add 0.5m of noise
-            # x0 += np.random.uniform(-0.5,0.5, size=(num_reset,))
-            # y0 += np.random.uniform(-0.5,0.5, size=(num_reset,))
-            # z0 += np.random.uniform(-0.5,0.5, size=(num_reset,))
         else:
             # set target gates to 0
             self.target_gates[dones] = np.zeros(num_reset, dtype=int)
@@ -376,22 +373,33 @@ class Quadcopter3DGates(VecEnv):
             y0 = 0*np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[1]
             z0 = 0*np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[2]
         
-        vx0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
-        vy0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
-        vz0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
-        
-        phi0   = np.random.uniform(-np.pi/9,np.pi/9, size=(num_reset,))
-        theta0 = np.random.uniform(-np.pi/9,np.pi/9, size=(num_reset,))
-        psi0   = np.random.uniform(-np.pi,np.pi, size=(num_reset,))
-        
-        p0 = np.random.uniform(-0.1,0.1, size=(num_reset,))
-        q0 = np.random.uniform(-0.1,0.1, size=(num_reset,))
-        r0 = np.random.uniform(-0.1,0.1, size=(num_reset,))
-        
-        w10 = np.random.uniform(-1,1, size=(num_reset,))
-        w20 = np.random.uniform(-1,1, size=(num_reset,))
-        w30 = np.random.uniform(-1,1, size=(num_reset,))
-        w40 = np.random.uniform(-1,1, size=(num_reset,))
+        if self.initialize_on_ground:
+            x0 = np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[0]
+            y0 = np.random.uniform(-0.5,0.5, size=(num_reset,)) + self.start_pos[1]
+            z0 = np.zeros(num_reset)
+            
+            vx0, vy0, vz0 = np.zeros((3,num_reset))
+            phi0, theta0 = np.zeros((2,num_reset))
+            psi0 = np.random.uniform(-np.pi,np.pi, size=(num_reset,))
+            p0, q0, r0 = np.zeros((3,num_reset))
+            w10, w20, w30, w40 = -np.ones((4,num_reset))
+        else:
+            vx0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
+            vy0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
+            vz0 = np.random.uniform(-0.5,0.5, size=(num_reset,))
+            
+            phi0   = np.random.uniform(-np.pi/9,np.pi/9, size=(num_reset,))
+            theta0 = np.random.uniform(-np.pi/9,np.pi/9, size=(num_reset,))
+            psi0   = np.random.uniform(-np.pi,np.pi, size=(num_reset,))
+            
+            p0 = np.random.uniform(-0.1,0.1, size=(num_reset,))
+            q0 = np.random.uniform(-0.1,0.1, size=(num_reset,))
+            r0 = np.random.uniform(-0.1,0.1, size=(num_reset,))
+            
+            w10 = np.random.uniform(-1,1, size=(num_reset,))
+            w20 = np.random.uniform(-1,1, size=(num_reset,))
+            w30 = np.random.uniform(-1,1, size=(num_reset,))
+            w40 = np.random.uniform(-1,1, size=(num_reset,))
 
         self.world_states[dones] = np.stack([x0, y0, z0, vx0, vy0, vz0, phi0, theta0, psi0, p0, q0, r0, w10, w20, w30, w40], axis=1)
 
@@ -458,8 +466,8 @@ class Quadcopter3DGates(VecEnv):
         # Gate collision penalty
         # rewards[gate_collision] = -10
 
-        # Ground collision penalty (z > 0)
-        ground_collision = new_states[:,2] > 0
+        # Ground collision penalty (z > 0) & (v>2)
+        ground_collision = (new_states[:,2] > 0) & (np.linalg.norm(new_states[:,3:6], axis=1) > 2)
         rewards[ground_collision] = -10
         
         # Check out of bounds

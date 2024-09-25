@@ -78,10 +78,15 @@ def view(get_drone_state=get_drone_state_zero,
          record_steps=0,
          record_file='output.mp4',
          show_window=True,
+         hist_len=100,
          ):
     follow=False
     record=False
     draw_forces=True
+    draw_path=False
+    
+    # posistion history
+    pos_hist = []
     
     # target point for the drone
     target = graphics.create_path(np.array([[0,0,0],[0,0,0.01]]))
@@ -106,7 +111,7 @@ def view(get_drone_state=get_drone_state_zero,
 
     while True:
         # ugly hack
-        cam.rotate([0., 0, 0.005])
+        # cam.rotate([0., 0, 0.005])
         # keep track of steps
         steps += 1
         if 0 < record_steps < steps:
@@ -121,6 +126,10 @@ def view(get_drone_state=get_drone_state_zero,
         pos = np.stack([state['x'], state['y'], state['z']]).T
         ori = np.stack([state['phi'], state['theta'], state['psi']]).T
         u = np.stack([state['u1'], state['u2'], state['u3'], state['u4']]).T
+        
+        # add to position history
+        pos_hist.pop(0) if len(pos_hist) > hist_len else None
+        pos_hist.append(pos)
 
         # update camera
         if follow:
@@ -169,6 +178,23 @@ def view(get_drone_state=get_drone_state_zero,
                 if draw_forces:
                     for force in forces:
                         force.draw(frame, cam, color=(0, 0, 255), pt=2)
+        
+        # draw path
+        if draw_path:
+            # if multiple drones
+            if len(pos.shape) > 1:
+                for i in range(pos.shape[0]):
+                    path = graphics.create_path([p[i] for p in pos_hist])
+                    if 'color' in state and len(state['color']) > i:
+                        path.draw(frame, cam, color=state['color'][i], pt=1)
+                    else:
+                        path.draw(frame, cam, color=(255, 0, 0), pt=1)
+            else:
+                path = graphics.create_path([p for p in pos_hist])
+                if 'color' in state and len(state['color']) > i:
+                    path.draw(frame, cam, color=state['color'][i], pt=1)
+                else:
+                    path.draw(frame, cam, color=(255, 0, 0), pt=1)
                         
         # draw gates
         for pos, yaw in zip(gate_pos, gate_yaw):
@@ -216,6 +242,9 @@ def view(get_drone_state=get_drone_state_zero,
             else:
                 print('recording started')
             record = not record
+        # if p is pressed draw path
+        elif key == ord('p'):
+            draw_path = not draw_path
         
         # show
         if show_window:
