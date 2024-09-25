@@ -102,6 +102,20 @@ f = [d_x, d_y, d_z, d_vx, d_vy, d_vz, d_phi, d_theta, d_psi, d_p, d_q, d_r, d_w1
 # lambdify
 f_func = lambdify((Array(state), Array(control), Array(params)), Array(f), 'numpy')
 
+# PERCEPTION REWARD
+# function for calculating perception angle
+cam_angle = symbols('cam_angle')
+# optical axis in body frame
+optical_axis = Matrix([cos(cam_angle), 0, sin(cam_angle)])
+# gate pos in world frame
+gx, gy, gz = symbols('gx gy gz')
+# gate pos in body frame
+gate_pos_B = R.T@(Matrix([gx,gy,gz]) - Matrix([x,y,z]))
+# get angle between optical_axis and gate_pos_B
+perc_angle = acos(optical_axis.dot(gate_pos_B)/(optical_axis.norm()*gate_pos_B.norm()))
+# lambdify
+get_perc_angle_func = lambda a: lambdify((Array(state), Array([gx,gy,gz])), Array(perc_angle.subs(cam_angle, a)), 'numpy')
+
 # PARAMETER ENCODING (used for parameter input)
 # normalize thrust and moment constants by scaling with w_max
 k_wn = k_w*(w_max**2)
@@ -130,7 +144,7 @@ from gymnasium import spaces
 from stable_baselines3.common.vec_env import VecEnv
 
 # DEFINE RACE TRACK
-r = 2.0
+r = 1.5
 gate_pos = np.array([
     [ r,  -r, -1.5],
     [ 0,   0, -1.5],
@@ -143,6 +157,7 @@ gate_pos = np.array([
 ])
 gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
 start_pos = gate_pos[0] + np.array([0,-r,0])
+start_pos[2] = 0
 
 class Quadcopter3DGates(VecEnv):
     def __init__(self,
@@ -161,8 +176,13 @@ class Quadcopter3DGates(VecEnv):
                  history_step_size=1,
                  param_input=False,
                  param_input_noise=0.,
-                 seed=None
+                 seed=None,
+                 cam_angle=0.0,
                  ):
+        # cam angle
+        self.cam_angle = cam_angle
+        self.perc_angle_func = get_perc_angle_func(self.cam_angle)
+        
         # set seed
         self.seed = seed
         if self.seed is not None:
@@ -437,18 +457,14 @@ class Quadcopter3DGates(VecEnv):
         # Rewards
         d2g_old = np.linalg.norm(pos_old - pos_gate, axis=1)
         d2g_new = np.linalg.norm(pos_new - pos_gate, axis=1)
-        rat_penalty = 0.001*np.linalg.norm(new_states[:,9:12], axis=1)
-        angle_penalty = 0.0*np.linalg.norm(new_states[:,6:8], axis=1)
-        action_penalty = 0.0*np.linalg.norm((self.actions+1)/2, axis=1)
-        action_penalty_delta = 0.001*np.linalg.norm((self.actions-self.prev_actions), axis=1)
-
-        prog_rewards = d2g_old - d2g_new
-        # max_speed = 12.0
-        # cap progress rewards to be less than max_speed*dt
-        # prog_rewards[prog_rewards > max_speed*self.dt] = max_speed*self.dt
         
-        # rewards = (d2g_old - d2g_new) - rat_penalty - angle_penalty
-        rewards = prog_rewards - rat_penalty #- action_penalty - action_penalty_delta
+        rat_penalty = 0.001*np.linalg.norm(new_states[:,9:12], axis=1)
+        prog_rewards = d2g_old - d2g_new
+        # perception reward l2*exp(l3*perc_angle) l2=0.02, l3=-10.0
+        perc_angle = self.perc_angle_func(new_states.T, pos_gate.T).T
+        perc_rewards = 0.02*np.exp(-10.0*perc_angle)
+        
+        rewards = prog_rewards - rat_penalty + perc_rewards
         
         # Gate passing/collision
         normal = np.array([np.cos(yaw_gate), np.sin(yaw_gate)]).T
