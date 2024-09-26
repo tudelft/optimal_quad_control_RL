@@ -146,7 +146,7 @@ from gymnasium import spaces
 from stable_baselines3.common.vec_env import VecEnv
 
 # DEFINE RACE TRACK
-r = 1.5
+r = 2.0
 gate_pos = np.array([
     [ r,  -r, -1.5],
     [ 0,   0, -1.5],

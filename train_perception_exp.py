@@ -105,7 +105,7 @@ def train(model, log_name, n=int(1e8)):
 
 
 # RUN TRAINING LOOP
-name = 'test1'
+name = 'test2'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):

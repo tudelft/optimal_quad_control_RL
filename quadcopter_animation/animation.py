@@ -8,7 +8,6 @@ import os
 width = 864
 height = 700 #864
 f=1.e+3
-f=500
 
 # graphics
 cam = graphics.Camera(
@@ -20,6 +19,10 @@ cam = graphics.Camera(
 cam.r[0] = -12.
 
 cam.rotate([0., -np.pi/2, 0.])
+
+def set_cam_f(f):
+    cam.cameraMatrix[0,0] = f
+    cam.cameraMatrix[1,1] = f
 
 # grid = graphics.create_grid(10, 10, 0.1)
 big_grid = graphics.create_grid(10, 10, 1)
@@ -260,6 +263,9 @@ def view(get_drone_state=get_drone_state_zero,
                 cam.theta = np.zeros(3)
                 cam.r[0] = -15.
                 cam.rotate([0., -np.pi/2, 0.])
+                set_cam_f(1000)
+            else:
+                set_cam_f(200)
             drone_cam = not drone_cam
         # zoom in with 1
         elif key == ord('1'):
