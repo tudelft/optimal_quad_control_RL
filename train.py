@@ -52,8 +52,8 @@ print("-----------------------------------")
 print(model.policy)
 print("-----------------------------------")
 
-# path_overload = "models/ground_exp/test1/100000000.zip"
-path_overload = "models/perception_exp/cool_split4/3000000.zip"
+path_overload = "models/ground_exp/test1/100000000.zip"
+# path_overload = "models/perception_exp/cool_split4/3000000.zip"
 print("overloading weights from", path_overload)
 model_old = PPO.load(path_overload)
 
@@ -106,7 +106,7 @@ def train(model, log_name, n=int(1e9)):
 
 
 # RUN TRAINING LOOP
-name = 'cool_split5'
+name = 'cool_split6'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):
