@@ -19,15 +19,15 @@ video_log_dir = 'videos/'+session_name
 env = Quadcopter3DGates(
     num_envs=100,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=True,
-    initialize_on_ground=False,
+    initialize_at_random_gates=False,
+    initialize_on_ground=True,
 )
 
 test_env = Quadcopter3DGates(
     num_envs=1,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=True,
-    initialize_on_ground=False
+    initialize_at_random_gates=False,
+    initialize_on_ground=True
 )
 
 # Wrap the environment in a Monitor wrapper
@@ -52,10 +52,11 @@ print("-----------------------------------")
 print(model.policy)
 print("-----------------------------------")
 
-path_overload = "models/ground_exp/test1/100000000.zip"
+# path_overload = "models/ground_exp/test1/100000000.zip"
+path_overload = "models/perception_exp/cool_split4/3000000.zip"
 print("overloading weights from", path_overload)
-# model_old = PPO.load("models/nn_size_comparison/run1_64_64_64/98000000.zip")
 model_old = PPO.load(path_overload)
+
 model.policy.load_state_dict(model_old.policy.state_dict())
 print("-----------------------------------")
 print(model.policy)
@@ -93,7 +94,7 @@ animate_policy(model, test_env, cam_angle=0)
     
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
-def train(model, log_name, n=int(1e8)):
+def train(model, log_name, n=int(1e9)):
     # save every 10 policy rollouts
     TIMESTEPS = model.n_steps*env.num_envs*10
     while model.num_timesteps < n:
@@ -105,7 +106,7 @@ def train(model, log_name, n=int(1e8)):
 
 
 # RUN TRAINING LOOP
-name = 'cool_split'
+name = 'cool_split5'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):

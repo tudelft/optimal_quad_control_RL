@@ -146,35 +146,78 @@ from gymnasium import spaces
 from stable_baselines3.common.vec_env import VecEnv
 
 # DEFINE RACE TRACK
+# r = 1.5
+# gate_pos = np.array([
+#     [ r,  -r, -1.5],
+#     [ 0,   0, -1.5],
+#     [-r,   r, -1.5],
+#     [ 0, 2*r, -1.5],
+#     [ r,   r, -1.5],
+#     [ 0,   0, -1.5],
+#     [-r,  -r, -1.5],
+#     [ 0,-2*r, -1.5]
+# ])
+# gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
+# start_pos = gate_pos[0] + np.array([0,-r,0])
+# start_pos[2] = 0
+
+# COOL RACE TRACK WITH FLIPS
+# r = 1.5
+# gate_pos = np.array([
+#     [0,   0, -1.5],
+#     [0,   r, -3.0],
+#     [0, 2*r, -1.5],
+#     [0,   r, -3.0],
+#     [0,   0, -1.5],
+#     [0,  -r, -3.0],
+#     [0,-2*r, -1.5],
+#     [0,  -r, -3.0],
+# ])
+# gate_yaw = np.array([0,1,0,1,0,1,0,1])*np.pi
+# start_pos = gate_pos[0] + np.array([-2*r,0,0])
+
+# COOL RACE TRACK WITH FLIPS 2
+# r = 1.5
+# r2 = .75
+# gate_pos = np.array([
+#     [0,      0,  -1.5],
+#     [r2,  0.5*r, -1.5-1],
+#     [0,       r, -1.5-2],
+#     [-r2, 1.5*r, -1.5-1],
+#     [0,     2*r, -1.5],
+#     [r2,  1.5*r, -1.5-1],
+#     [0,       r, -1.5-2],
+#     [-r2, 0.5*r, -1.5-1],
+#     [0,       0, -1.5],
+#     [r2, -0.5*r, -1.5-1],
+#     [0,      -r, -1.5-2],
+#     [-r2,-1.5*r, -1.5-1],
+#     [0,    -2*r, -1.5],
+#     [r2, -1.5*r, -1.5-1],
+#     [0,      -r, -1.5-2],
+#     [-r2,-0.5*r, -1.5-1],
+# ])
+# gate_yaw = np.array([0,1,2,1,0,-1,-2,-1,0,-1,-2,-1,0,1,2,1])*np.pi/2
+# start_pos = gate_pos[0] + np.array([-2*r,0,0])
+
+# COOL RACE TRACK WITH FLIPS 3
 r = 1.5
 gate_pos = np.array([
     [ r,  -r, -1.5],
     [ 0,   0, -1.5],
     [-r,   r, -1.5],
+    [ 0, 2*r, -1.5], # looping
+    [ 0, 2*r, -3.5],
     [ 0, 2*r, -1.5],
     [ r,   r, -1.5],
     [ 0,   0, -1.5],
     [-r,  -r, -1.5],
     [ 0,-2*r, -1.5]
 ])
-gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
+gate_yaw = np.array([1,2,1,0,2,0,-1,-2,-1,0])*np.pi/2
+print(len(gate_pos), len(gate_yaw))
 start_pos = gate_pos[0] + np.array([0,-r,0])
 start_pos[2] = 0
-
-# COOL RACE TRACK WITH FLIPS
-r = 1.5
-gate_pos = np.array([
-    [0,   0, -1.5],
-    [0,   r, -3.0],
-    [0, 2*r, -1.5],
-    [0,   r, -3.0],
-    [0,   0, -1.5],
-    [0,  -r, -3.0],
-    [0,-2*r, -1.5],
-    [0,  -r, -3.0],
-])
-gate_yaw = np.array([0,1,0,1,0,1,0,1])*np.pi
-start_pos = gate_pos[0] + np.array([-2*r,0,0])
     
 # DEFINE ENVIRONMENT
 class Quadcopter3DGates(VecEnv):
