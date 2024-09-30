@@ -19,15 +19,15 @@ video_log_dir = 'videos/'+session_name
 env = Quadcopter3DGates(
     num_envs=100,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=False,
-    initialize_on_ground=True,
+    initialize_at_random_gates=True,
+    initialize_on_ground=False,
 )
 
 test_env = Quadcopter3DGates(
-    num_envs=1,
+    num_envs=2,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=False,
-    initialize_on_ground=True
+    initialize_at_random_gates=True,
+    initialize_on_ground=False
 )
 
 # Wrap the environment in a Monitor wrapper
@@ -52,15 +52,15 @@ print("-----------------------------------")
 print(model.policy)
 print("-----------------------------------")
 
-path_overload = "models/ground_exp/test1/100000000.zip"
-# path_overload = "models/perception_exp/cool_split4/3000000.zip"
-print("overloading weights from", path_overload)
-model_old = PPO.load(path_overload)
+# path_overload = "models/ground_exp/test1/100000000.zip"
+# # path_overload = "models/perception_exp/cool_split4/3000000.zip"
+# print("overloading weights from", path_overload)
+# model_old = PPO.load(path_overload)
 
-model.policy.load_state_dict(model_old.policy.state_dict())
-print("-----------------------------------")
-print(model.policy)
-print("-----------------------------------")
+# model.policy.load_state_dict(model_old.policy.state_dict())
+# print("-----------------------------------")
+# print(model.policy)
+# print("-----------------------------------")
 print("Logging to", log_dir)
 print("Saving models to", models_dir)
 
@@ -106,7 +106,7 @@ def train(model, log_name, n=int(1e9)):
 
 
 # RUN TRAINING LOOP
-name = 'cool_split6'
+name = 'cool_split7'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):
