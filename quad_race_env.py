@@ -146,7 +146,7 @@ from gymnasium import spaces
 from stable_baselines3.common.vec_env import VecEnv
 
 # DEFINE RACE TRACK
-r = 2.0
+r = 1.5
 gate_pos = np.array([
     [ r,  -r, -1.5],
     [ 0,   0, -1.5],
@@ -161,6 +161,31 @@ gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
 start_pos = gate_pos[0] + np.array([0,-r,0])
 start_pos[2] = 0
 
+# COOL RACE TRACK WITH FLIPS
+r = 1.5
+n = 4
+gate_pos = np.array([
+    [-r/n,   0, -1.5],
+    [ r/n,   0, -1.5],
+    [ r/n,   r, -3.0],
+    [-r/n,   r, -3.0],
+    [-r/n, 2*r, -1.5],
+    [ r/n, 2*r, -1.5],
+    [ r/n,   r, -3.0],
+    [-r/n,   r, -3.0],
+    [-r/n,   0, -1.5],
+    [ r/n,   0, -1.5],
+    [ r/n,  -r, -3.0],
+    [-r/n,  -r, -3.0],
+    [-r/n,-2*r, -1.5],
+    [ r/n,-2*r, -1.5],
+    [ r/n,  -r, -3.0],
+    [-r/n,  -r, -3.0],
+])
+gate_yaw = np.array([0,0,1,1,0,0,-1,-1,0,0,1,1,0,0,-1,-1])*np.pi
+start_pos = gate_pos[0] + np.array([-2*r,0,0])
+    
+# DEFINE ENVIRONMENT
 class Quadcopter3DGates(VecEnv):
     def __init__(self,
                  num_envs,
@@ -385,7 +410,7 @@ class Quadcopter3DGates(VecEnv):
             pos = self.gate_pos[self.target_gates[dones]%self.num_gates]
             yaw = self.gate_yaw[self.target_gates[dones]%self.num_gates]
             
-            pos = pos - np.array([np.cos(yaw), np.sin(yaw), np.zeros_like(yaw)]).T
+            pos = pos - 2*np.array([np.cos(yaw), np.sin(yaw), np.zeros_like(yaw)]).T
             x0, y0, z0 = pos.T
         else:
             # set target gates to 0
