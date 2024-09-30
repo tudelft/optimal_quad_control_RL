@@ -37,6 +37,18 @@ gate = graphics.create_path(np.array([
     [0, -n/2, -n/2],
     [0, -n/2, n/2]
 ]), loop=True)
+
+# interpolate between two points in 3D
+def interpolate(p1, p2, num=10):
+    return [p1 + (p2-p1)*i/num for i in range(num+1)]
+
+gate = graphics.create_path(np.array(
+    interpolate(np.array([0, n/2, n/2]), np.array([0, n/2, -n/2])) +
+    interpolate(np.array([0, n/2, -n/2]), np.array([0, -n/2, -n/2])) +
+    interpolate(np.array([0, -n/2, -n/2]), np.array([0, -n/2, n/2])) +
+    interpolate(np.array([0, -n/2, n/2]), np.array([0, n/2, n/2]))
+), loop=True)
+    
 # gate_direction = graphics.create_path(np.array([[0,0,0],[.1,0,0]]))
 # gate = graphics.group([gate, gate_direction])
 
