@@ -19,8 +19,8 @@ print("device:", device)
 torch.set_default_device(device)
 
 # Equations of motion 3D quadcopter from https://arxiv.org/pdf/2304.13460.pdf
-state = symbols('x y z v_x v_y v_z qw qx qy qz p q r w1 w2 w3 w4')
-x,y,z,vx,vy,vz,qw,qx,qy,qz,p,q,r,w1,w2,w3,w4 = state
+state = symbols('x y z v_x v_y v_z phi theta psi p q r w1 w2 w3 w4')
+x,y,z,vx,vy,vz,phi,theta,psi,p,q,r,w1,w2,w3,w4 = state
 control = symbols('U_1 U_2 U_3 U_4')    # normalized motor commands between [-1,1]
 u1,u2,u3,u4 = control
 
@@ -28,11 +28,14 @@ g = 9.81
 params = symbols('k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4, k_r1, k_r2, k_r3, k_r4, k_r5, k_r6, k_r7, k_r8, tau, k, w_min, w_max')
 k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4, k_r1, k_r2, k_r3, k_r4, k_r5, k_r6, k_r7, k_r8, tau, k, w_min, w_max = params
 
-# Quaternion
-quat = Quaternion(qw, qx, qy, qz)
+# Rotation matrix 
+Rx = Matrix([[1, 0, 0], [0, cos(phi), -sin(phi)], [0, sin(phi), cos(phi)]])
+Ry = Matrix([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
+Rz = Matrix([[cos(psi), -sin(psi), 0], [sin(psi), cos(psi), 0], [0, 0, 1]])
+R = Rz*Ry*Rx
 
 # Body velocity
-vbx, vby, vbz = Quaternion.rotate_point([vx,vy,vz], quat.inverse())
+vbx, vby, vbz = R.T@Matrix([vx,vy,vz])
 
 # normalized motor speeds to rad/s
 w_min_n = 0.
@@ -83,42 +86,21 @@ d_x = vx
 d_y = vy
 d_z = vz
 
-d_vx, d_vy, d_vz = Matrix([0,0,g]) + Matrix(Quaternion.rotate_point([Dx,Dy,T], quat))
+d_vx, d_vy, d_vz = Matrix([0,0,g]) + R@Matrix([Dx, Dy,T])
 
-d_quat = 0.5*quat*Quaternion(0,p,q,r)
-d_qw = d_quat.a
-d_qx = d_quat.b
-d_qy = d_quat.c
-d_qz = d_quat.d
+d_phi   = p + q*sin(phi)*tan(theta) + r*cos(phi)*tan(theta)
+d_theta = q*cos(phi) - r*sin(phi)
+d_psi   = q*sin(phi)/cos(theta) + r*cos(phi)/cos(theta)
 
 d_p     = Mx
 d_q     = My
 d_r     = Mz
 
 # State space model
-f = [d_x, d_y, d_z, d_vx, d_vy, d_vz, d_qw, d_qx, d_qy, d_qz, d_p, d_q, d_r, d_w1, d_w2, d_w3, d_w4]
+f = [d_x, d_y, d_z, d_vx, d_vy, d_vz, d_phi, d_theta, d_psi, d_p, d_q, d_r, d_w1, d_w2, d_w3, d_w4]
 
 # lambdify
 f_func = lambdify((Array(state), Array(control), Array(params)), Array(f), 'numpy')
-
-# USEFUL FUNCTIONS
-phi, theta, psi = symbols('phi theta psi')
-# euler to quaternion
-euler_to_quat = lambda phi, theta, psi: Array([
-    cos(phi/2)*cos(theta/2)*cos(psi/2) + sin(phi/2)*sin(theta/2)*sin(psi/2),
-    sin(phi/2)*cos(theta/2)*cos(psi/2) - cos(phi/2)*sin(theta/2)*sin(psi/2),
-    cos(phi/2)*sin(theta/2)*cos(psi/2) + sin(phi/2)*cos(theta/2)*sin(psi/2),
-    cos(phi/2)*cos(theta/2)*sin(psi/2) - sin(phi/2)*sin(theta/2)*cos(psi/2)
-])
-# quaternion to euler
-quat_to_euler = lambda quat: Array([
-    atan2(2*(quat[0]*quat[1] + quat[2]*quat[3]), 1 - 2*(quat[1]**2 + quat[2]**2)),
-    asin(2*(quat[0]*quat[2] - quat[3]*quat[1])),
-    atan2(2*(quat[0]*quat[3] + quat[1]*quat[2]), 1 - 2*(quat[2]**2 + quat[3]**2))
-])
-# lambdify
-euler_to_quat_func = lambdify((phi,theta,psi), euler_to_quat(phi,theta,psi), 'numpy')
-quat_to_euler_func = lambdify((qw,qx,qy,qz), quat_to_euler(Array([qw,qx,qy,qz])), 'numpy')
 
 # PERCEPTION REWARD
 # function for calculating perception angle
@@ -128,7 +110,7 @@ optical_axis = Matrix([cos(cam_angle), 0, sin(cam_angle)])
 # gate pos in world frame
 gx, gy, gz = symbols('gx gy gz')
 # gate pos in body frame
-gate_pos_B = Matrix(Quaternion.rotate_point(Matrix([gx,gy,gz]) - Matrix([x,y,z]), quat.inverse()))
+gate_pos_B = R.T@(Matrix([gx,gy,gz]) - Matrix([x,y,z]))
 # get angle between optical_axis and gate_pos_B
 perc_angle = acos(optical_axis.dot(gate_pos_B)/(optical_axis.norm()*gate_pos_B.norm()))
 # lambdify
@@ -338,10 +320,10 @@ class Quadcopter3DGates(VecEnv):
         u_lim = 2*self.motor_limit-1
         action_space = spaces.Box(low=-1, high=u_lim, shape=(4,))
 
-        # observation space: pos[G], vel[G], att[quatB->G], rates[B], rpms, future_gates[G], future_gate_dirs[G]
+        # observation space: pos[G], vel[G], att[eulerB->G], rates[B], rpms, future_gates[G], future_gate_dirs[G]
         # [G] = reference frame aligned with target gate
         # [B] = body frame
-        self.state_len = 17+4*self.gates_ahead+4*self.num_action_history+9*self.param_input
+        self.state_len = 16+4*self.gates_ahead+4*self.num_action_history+9*self.param_input
         self.obs_len = self.state_len*(1+self.num_state_history)
         observation_space = spaces.Box(
             low  = np.array([-np.inf]*self.obs_len),
@@ -351,8 +333,8 @@ class Quadcopter3DGates(VecEnv):
         # Initialize the VecEnv
         VecEnv.__init__(self, num_envs, observation_space, action_space)
 
-        # world state: pos[W], vel[W], att[quatB->W], rates[B], rpms
-        self.world_states = np.zeros((num_envs,17), dtype=np.float32)
+        # world state: pos[W], vel[W], att[eulerB->W], rates[B], rpms
+        self.world_states = np.zeros((num_envs,16), dtype=np.float32)
         # observation state
         self.states = np.zeros((num_envs,self.obs_len), dtype=np.float32)
         # state history tracking
@@ -407,18 +389,18 @@ class Quadcopter3DGates(VecEnv):
         new_states[:,5] = vel_W[:,2]
 
         # Update attitude
-        new_states[:,6:10] = self.world_states[:,6:10]
-        # yaw = self.world_states[:,8] - gate_yaw
-        # yaw %= 2*np.pi
-        # yaw[yaw > np.pi] -= 2*np.pi
-        # yaw[yaw < -np.pi] += 2*np.pi
-        # new_states[:,8] = yaw
+        new_states[:,6:8] = self.world_states[:,6:8]
+        yaw = self.world_states[:,8] - gate_yaw
+        yaw %= 2*np.pi
+        yaw[yaw > np.pi] -= 2*np.pi
+        yaw[yaw < -np.pi] += 2*np.pi
+        new_states[:,8] = yaw
 
         # Update rates
-        new_states[:,10:13] = self.world_states[:,10:13]
+        new_states[:,9:12] = self.world_states[:,9:12]
 
         # Update rpms
-        new_states[:,13:17] = self.world_states[:,13:17]
+        new_states[:,12:16] = self.world_states[:,12:16]
 
         # Update future gates relative to current gate ([0,0,0,0] for out of bounds)
         for i in range(self.gates_ahead):
@@ -426,19 +408,19 @@ class Quadcopter3DGates(VecEnv):
             # loop when out of bounds
             indices = indices % self.num_gates
             valid = indices < self.num_gates
-            new_states[valid,17+4*i:17+4*i+3] = self.gate_pos_rel[indices[valid]]
-            new_states[valid,17+4*i+3] = self.gate_yaw_rel[indices[valid]]
+            new_states[valid,16+4*i:16+4*i+3] = self.gate_pos_rel[indices[valid]]
+            new_states[valid,16+4*i+3] = self.gate_yaw_rel[indices[valid]]
 
         # update action history
         self.action_hist = np.roll(self.action_hist, 1, axis=1)
         self.action_hist[:,0] = self.actions
         
         for i in range(self.num_action_history):
-            new_states[:,17+4*self.gates_ahead+4*i:17+4*self.gates_ahead+4*i+4] = self.action_hist[:,(i+1)*self.history_step_size-1]
+            new_states[:,16+4*self.gates_ahead+4*i:16+4*self.gates_ahead+4*i+4] = self.action_hist[:,(i+1)*self.history_step_size-1]
         
         # update param encoding
         if self.param_input:
-            new_states[:,17+4*self.gates_ahead+4*self.num_action_history:] = self.param_encoding
+            new_states[:,16+4*self.gates_ahead+4*self.num_action_history:] = self.param_encoding
             
         # update state history
         self.state_hist = np.roll(self.state_hist, 1, axis=1)
@@ -499,11 +481,8 @@ class Quadcopter3DGates(VecEnv):
             w20 = np.random.uniform(-1,1, size=(num_reset,))
             w30 = np.random.uniform(-1,1, size=(num_reset,))
             w40 = np.random.uniform(-1,1, size=(num_reset,))
-            
-        quat0 = euler_to_quat_func(phi0, theta0, psi0)
-        qw0, qx0, qy0, qz0 = quat0
 
-        self.world_states[dones] = np.stack([x0, y0, z0, vx0, vy0, vz0, qw0, qx0, qy0, qz0, p0, q0, r0, w10, w20, w30, w40], axis=1)
+        self.world_states[dones] = np.stack([x0, y0, z0, vx0, vy0, vz0, phi0, theta0, psi0, p0, q0, r0, w10, w20, w30, w40], axis=1)
 
         self.step_counts[dones] = np.zeros(num_reset)
         
