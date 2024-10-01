@@ -29,10 +29,30 @@ params = symbols('k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4,
 k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4, k_r1, k_r2, k_r3, k_r4, k_r5, k_r6, k_r7, k_r8, tau, k, w_min, w_max = params
 
 # Quaternion
-quat = Quaternion(qw, qx, qy, qz)
+quat =[qw, qx, qy, qz]
+
+def quat_mult(quat1, quat2):
+    a1, b1, c1, d1 = quat1
+    a2, b2, c2, d2 = quat2
+    return [
+        a1*a2 - b1*b2 - c1*c2 - d1*d2,
+        a1*b2 + b1*a2 + c1*d2 - d1*c2,
+        a1*c2 - b1*d2 + c1*a2 + d1*b2,
+        a1*d2 + b1*c2 - c1*b2 + d1*a2
+    ]
+    
+def quat_conjugate(quat):
+    return [quat[0], -quat[1], -quat[2], -quat[3]]
+    
+def quat_rotate_point(vec, quat):
+    return quat_mult(quat_mult(quat, [0,*vec]), quat_conjugate(quat))[1:]
+
+def quat_inv(quat):
+    norm2 = quat[0]**2 + quat[1]**2 + quat[2]**2 + quat[3]**2
+    return [quat[0]/norm2, -quat[1]/norm2, -quat[2]/norm2, -quat[3]/norm2]
 
 # Body velocity
-vbx, vby, vbz = Quaternion.rotate_point([vx,vy,vz], quat.inverse())
+vbx, vby, vbz = quat_rotate_point([vx,vy,vz], quat)
 
 # normalized motor speeds to rad/s
 w_min_n = 0.
@@ -83,13 +103,11 @@ d_x = vx
 d_y = vy
 d_z = vz
 
-d_vx, d_vy, d_vz = Matrix([0,0,g]) + Matrix(Quaternion.rotate_point([Dx,Dy,T], quat))
+d_vx, d_vy, d_vz = Matrix([0,0,g]) + Matrix(quat_rotate_point([Dx,Dy,T], quat))
 
-d_quat = 0.5*quat*Quaternion(0,p,q,r)
-d_qw = d_quat.a
-d_qx = d_quat.b
-d_qy = d_quat.c
-d_qz = d_quat.d
+# d_quat = 0.5*quat*Quaternion(0,p,q,r)
+d_quat = 0.5*Array(quat_mult(quat, [0,p,q,r]))
+d_qw, d_qx, d_qy, d_qz = d_quat
 
 d_p     = Mx
 d_q     = My
@@ -128,7 +146,7 @@ optical_axis = Matrix([cos(cam_angle), 0, sin(cam_angle)])
 # gate pos in world frame
 gx, gy, gz = symbols('gx gy gz')
 # gate pos in body frame
-gate_pos_B = Matrix(Quaternion.rotate_point(Matrix([gx,gy,gz]) - Matrix([x,y,z]), quat.inverse()))
+gate_pos_B = Matrix(quat_rotate_point([gx-x,gy-y,gz-z], quat_inv(quat)))
 # get angle between optical_axis and gate_pos_B
 perc_angle = acos(optical_axis.dot(gate_pos_B)/(optical_axis.norm()*gate_pos_B.norm()))
 # lambdify
@@ -408,6 +426,11 @@ class Quadcopter3DGates(VecEnv):
 
         # Update attitude
         new_states[:,6:10] = self.world_states[:,6:10]
+
+        # check quaternion is normalized
+        # quat = new_states[:,6:10]
+        # print('norm of quat', np.linalg.norm(quat, axis=1))
+        
         # yaw = self.world_states[:,8] - gate_yaw
         # yaw %= 2*np.pi
         # yaw[yaw > np.pi] -= 2*np.pi
@@ -528,6 +551,9 @@ class Quadcopter3DGates(VecEnv):
     
     def step_wait(self):
         new_states = self.world_states + self.dt*f_func(self.world_states.T, self.actions.T, self.params.T).T
+        
+        # normalize the quaternion
+        new_states[:,6:10] /= np.linalg.norm(new_states[:,6:10], axis=1)[:,np.newaxis]
         
         self.step_counts += 1
 
