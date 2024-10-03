@@ -18,14 +18,14 @@ video_log_dir = 'videos/'+session_name
 
 env = Quadcopter3DGates(
     num_envs=100,
-    randomization=randomization_dummy_30_percent,
+    randomization=randomization_dummy_20_percent,
     initialize_at_random_gates=False,
     initialize_on_ground=True,
 )
 
 test_env = Quadcopter3DGates(
     num_envs=1,
-    randomization=randomization_dummy_30_percent,
+    randomization=randomization_dummy_20_percent,
     initialize_at_random_gates=False,
     initialize_on_ground=True
 )
@@ -53,7 +53,7 @@ print(model.policy)
 print("-----------------------------------")
 
 path_overload = "models/ground_exp/test1/100000000.zip"
-# path_overload = "models/perception_exp/cool_split4/3000000.zip"
+# path_overload = "models/perception_exp/circle_1/290000000.zip"
 print("overloading weights from", path_overload)
 model_old = PPO.load(path_overload)
 
@@ -106,7 +106,7 @@ def train(model, log_name, n=int(1e9)):
 
 
 # RUN TRAINING LOOP
-name = 'cool_split6'
+name = 'circle_big_20%'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):

@@ -151,71 +151,24 @@ from stable_baselines3.common.vec_env import VecEnv
 #     [ r,  -r, -1.5],
 #     [ 0,   0, -1.5],
 #     [-r,   r, -1.5],
+#     [ 0, 2*r, -1.5], # looping
+#     [ 0, 2*r, -3.5],
 #     [ 0, 2*r, -1.5],
 #     [ r,   r, -1.5],
 #     [ 0,   0, -1.5],
 #     [-r,  -r, -1.5],
 #     [ 0,-2*r, -1.5]
 # ])
-# gate_yaw = np.array([1,2,1,0,-1,-2,-1,0])*np.pi/2
+# gate_yaw = np.array([1,2,1,0,2,0,-1,-2,-1,0])*np.pi/2
+# print(len(gate_pos), len(gate_yaw))
 # start_pos = gate_pos[0] + np.array([0,-r,0])
 # start_pos[2] = 0
 
-# COOL RACE TRACK WITH FLIPS
-# r = 1.5
-# gate_pos = np.array([
-#     [0,   0, -1.5],
-#     [0,   r, -3.0],
-#     [0, 2*r, -1.5],
-#     [0,   r, -3.0],
-#     [0,   0, -1.5],
-#     [0,  -r, -3.0],
-#     [0,-2*r, -1.5],
-#     [0,  -r, -3.0],
-# ])
-# gate_yaw = np.array([0,1,0,1,0,1,0,1])*np.pi
-# start_pos = gate_pos[0] + np.array([-2*r,0,0])
-
-# COOL RACE TRACK WITH FLIPS 2
-# r = 1.5
-# r2 = .75
-# gate_pos = np.array([
-#     [0,      0,  -1.5],
-#     [r2,  0.5*r, -1.5-1],
-#     [0,       r, -1.5-2],
-#     [-r2, 1.5*r, -1.5-1],
-#     [0,     2*r, -1.5],
-#     [r2,  1.5*r, -1.5-1],
-#     [0,       r, -1.5-2],
-#     [-r2, 0.5*r, -1.5-1],
-#     [0,       0, -1.5],
-#     [r2, -0.5*r, -1.5-1],
-#     [0,      -r, -1.5-2],
-#     [-r2,-1.5*r, -1.5-1],
-#     [0,    -2*r, -1.5],
-#     [r2, -1.5*r, -1.5-1],
-#     [0,      -r, -1.5-2],
-#     [-r2,-0.5*r, -1.5-1],
-# ])
-# gate_yaw = np.array([0,1,2,1,0,-1,-2,-1,0,-1,-2,-1,0,1,2,1])*np.pi/2
-# start_pos = gate_pos[0] + np.array([-2*r,0,0])
-
-# COOL RACE TRACK WITH FLIPS 3
-r = 1.5
-gate_pos = np.array([
-    [ r,  -r, -1.5],
-    [ 0,   0, -1.5],
-    [-r,   r, -1.5],
-    [ 0, 2*r, -1.5], # looping
-    [ 0, 2*r, -3.5],
-    [ 0, 2*r, -1.5],
-    [ r,   r, -1.5],
-    [ 0,   0, -1.5],
-    [-r,  -r, -1.5],
-    [ 0,-2*r, -1.5]
-])
-gate_yaw = np.array([1,2,1,0,2,0,-1,-2,-1,0])*np.pi/2
-print(len(gate_pos), len(gate_yaw))
+# CIRCULAR RACE TRACK
+r = 4.
+num = 8
+gate_pos = np.array([[r*np.cos(2*np.pi*i/num), r*np.sin(2*np.pi*i/num), -1.5] for i in range(num)])
+gate_yaw = np.array([2*np.pi*i/num for i in range(num)])+np.pi/2
 start_pos = gate_pos[0] + np.array([0,-r,0])
 start_pos[2] = 0
     
@@ -527,7 +480,7 @@ class Quadcopter3DGates(VecEnv):
         perc_rewards = 0.02*np.exp(-10.0*perc_angle)
         
         # raise ValueError('stop')
-        rewards = prog_rewards - rat_penalty #+ perc_rewards
+        rewards = prog_rewards - rat_penalty + perc_rewards
         
         # Gate passing/collision
         normal = np.array([np.cos(yaw_gate), np.sin(yaw_gate)]).T
