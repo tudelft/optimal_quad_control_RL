@@ -277,7 +277,7 @@ def view(get_drone_state=get_drone_state_zero,
                 cam.rotate([0., -np.pi/2, 0.])
                 set_cam_f(1000)
             else:
-                set_cam_f(100)
+                set_cam_f(200)
             drone_cam = not drone_cam
         # zoom in with 1
         elif key == ord('1'):

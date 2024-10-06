@@ -165,11 +165,22 @@ from stable_baselines3.common.vec_env import VecEnv
 # start_pos[2] = 0
 
 # CIRCULAR RACE TRACK
-r = 4.
-num = 8
-gate_pos = np.array([[r*np.cos(2*np.pi*i/num), r*np.sin(2*np.pi*i/num), -1.5] for i in range(num)])
-gate_yaw = np.array([2*np.pi*i/num for i in range(num)])+np.pi/2
-start_pos = gate_pos[0] + np.array([0,-r,0])
+# r = 4.
+# num = 8
+# gate_pos = np.array([[r*np.cos(2*np.pi*i/num), r*np.sin(2*np.pi*i/num), -1.5] for i in range(num)])
+# gate_yaw = np.array([2*np.pi*i/num for i in range(num)])+np.pi/2
+# start_pos = gate_pos[0] + np.array([0,-r,0])
+# start_pos[2] = 0
+
+# RECTANGLE TRACK FOR TII
+gate_pos = np.array([
+    [-5., -2., -1.5],
+    [ 5., -2., -1.5],
+    [ 5.,  2., -1.5],
+    [-5.,  2., -1.5]
+])
+gate_yaw = np.array([0, 0, 1, 1])*np.pi
+start_pos = gate_pos[0] + np.array([-3,0,0])
 start_pos[2] = 0
     
 # DEFINE ENVIRONMENT
@@ -473,6 +484,7 @@ class Quadcopter3DGates(VecEnv):
         d2g_new = np.linalg.norm(pos_new - pos_gate, axis=1)
         
         rat_penalty = 0.001*np.linalg.norm(new_states[:,9:12], axis=1)
+        action_penalty = 0.1*np.linalg.norm(self.actions - self.prev_actions, axis=1)
         prog_rewards = d2g_old - d2g_new
         
         # perception reward from (https://www.nature.com/articles/s41586-023-06419-4) l2*exp(l3*perc_angle) l2=0.02, l3=-10.0
@@ -480,7 +492,7 @@ class Quadcopter3DGates(VecEnv):
         perc_rewards = 0.02*np.exp(-10.0*perc_angle)
         
         # raise ValueError('stop')
-        rewards = prog_rewards - rat_penalty + perc_rewards
+        rewards = prog_rewards - rat_penalty + perc_rewards - action_penalty
         
         # Gate passing/collision
         normal = np.array([np.cos(yaw_gate), np.sin(yaw_gate)]).T
@@ -503,9 +515,9 @@ class Quadcopter3DGates(VecEnv):
         rewards[ground_collision] = -10
         
         # Check out of bounds
-        out_of_bounds = np.any(np.abs(new_states[:,0:2]) > 5, axis=1)          # edges of the grid
-        out_of_bounds |= new_states[:,2] < -7                                  # max height (z-axis point down)
-        out_of_bounds |= np.any(np.abs(new_states[:,9:12]) > 1000, axis=1)     # prevent numerical issues
+        out_of_bounds = np.any(np.abs(new_states[:,0:2]) > 20, axis=1)          # edges of the grid
+        out_of_bounds |= new_states[:,2] < -10                                  # max height (z-axis point down)
+        out_of_bounds |= np.any(np.abs(new_states[:,9:12]) > 1000, axis=1)      # prevent numerical issues
         rewards[out_of_bounds] = -10
         
         # Check number of steps

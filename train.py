@@ -18,16 +18,16 @@ video_log_dir = 'videos/'+session_name
 
 env = Quadcopter3DGates(
     num_envs=100,
-    randomization=randomization_dummy_20_percent,
-    initialize_at_random_gates=False,
-    initialize_on_ground=True,
+    randomization=randomization_dummy_30_percent,
+    initialize_at_random_gates=True,
+    initialize_on_ground=False,
 )
 
 test_env = Quadcopter3DGates(
     num_envs=1,
-    randomization=randomization_dummy_20_percent,
-    initialize_at_random_gates=False,
-    initialize_on_ground=True
+    randomization=randomization_dummy_30_percent,
+    initialize_at_random_gates=True,
+    initialize_on_ground=False
 )
 
 # Wrap the environment in a Monitor wrapper
@@ -52,12 +52,14 @@ print("-----------------------------------")
 print(model.policy)
 print("-----------------------------------")
 
-path_overload = "models/ground_exp/test1/100000000.zip"
+# OVERLOAD WEIGHTS
+# path_overload = "models/ground_exp/test1/100000000.zip"
 # path_overload = "models/perception_exp/circle_1/290000000.zip"
+path_overload = "models/perception_exp/long_rectangle_3(dummy30)/938000000.zip"
 print("overloading weights from", path_overload)
 model_old = PPO.load(path_overload)
-
 model.policy.load_state_dict(model_old.policy.state_dict())
+
 print("-----------------------------------")
 print(model.policy)
 print("-----------------------------------")
@@ -106,7 +108,7 @@ def train(model, log_name, n=int(1e9)):
 
 
 # RUN TRAINING LOOP
-name = 'circle_big_20%'
+name = 'long_rectangle_3(dummy30)_action_penalty_1.'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):
