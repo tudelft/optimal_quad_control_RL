@@ -25,12 +25,12 @@ def set_cam_f(f):
     cam.cameraMatrix[1,1] = f
 
 # grid = graphics.create_grid(10, 10, 0.1)
-big_grid = graphics.create_grid(10, 10, 1)
+big_grid = graphics.create_grid(6, 16, 1)
 
 drone, forces = graphics.create_drone(0.08)
 
 # nxn (m) gate
-n = 1.5
+n = 1.
 gate = graphics.create_path(np.array([
     [0, n/2, n/2],
     [0, n/2, -n/2],
@@ -97,6 +97,7 @@ def view(get_drone_state=get_drone_state_zero,
          show_window=True,
          hist_len=100,
          cam_angle=0.,
+         reset_func=None,
          ):
     follow=False
     record=False
@@ -304,6 +305,13 @@ def view(get_drone_state=get_drone_state_zero,
                 print('paused')
             else:
                 print('unpaused')
+        # if q is pressed we call the reset function
+        elif key == ord('q'):
+            if reset_func:
+                reset_func()
+                pause = True
+            else:
+                print('No reset function provided')
         
         # show
         if show_window:

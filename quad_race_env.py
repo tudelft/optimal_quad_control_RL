@@ -174,15 +174,40 @@ from stable_baselines3.common.vec_env import VecEnv
 
 # RECTANGLE TRACK FOR TII
 gate_pos = np.array([
-    [-5., -2., -1.5],
-    [ 5., -2., -1.5],
-    [ 5.,  2., -1.5],
-    [-5.,  2., -1.5]
+    [1.5, -5., -1.5],
+    [1.5,  5., -1.5],
+    [0.0, 6.5, -1.5],
+    [-1.5, 5., -1.5],
+    [-1.5, -5., -1.5],
+    [0.0, -6.5, -1.5]
 ])
-gate_yaw = np.array([0, 0, 1, 1])*np.pi
-start_pos = gate_pos[0] + np.array([-3,0,0])
+gate_yaw = np.array([0, 0, 0.5, 1, 1, 1.5])*np.pi+np.pi/2
+start_pos = gate_pos[0] + np.array([0,-2,0])
 start_pos[2] = 0
-    
+
+# # SPLIT S TRACK
+# gate_pos_FLU = np.array([
+#     [-5., 4.75, 1.],
+#     [-0.5, -1.0, 3.25],
+#     [9.6, 6.25, 1.1],
+#     [9.5, -3.8, 1.1],
+#     [-4.5, -5.1, 3.25],
+#     [-4.5, -5.1, 1.2],
+#     [4.9, -0.5, 1.1],
+#     [-2.0, 6.6, 1.1],
+#     [-0.5, -1.0, 3.25],
+# ])
+# gate_yaw_FLU_deg = np.array([-90, -18, 0, 226, 180, 0, 79, 208, -18])
+
+# # gate pos FLU to FRD
+# gate_pos = gate_pos_FLU
+# gate_pos[:,1] *= -1
+# gate_pos[:,2] *= -1
+# # gate yaw FLU to FRD
+# gate_yaw = gate_yaw_FLU_deg*np.pi/180
+# start_pos = gate_pos[0] + np.array([-3,0,0])
+
+
 # DEFINE ENVIRONMENT
 class Quadcopter3DGates(VecEnv):
     def __init__(self,
@@ -492,7 +517,7 @@ class Quadcopter3DGates(VecEnv):
         perc_rewards = 0.02*np.exp(-10.0*perc_angle)
         
         # raise ValueError('stop')
-        rewards = prog_rewards - rat_penalty + perc_rewards - action_penalty
+        rewards = prog_rewards - rat_penalty + perc_rewards
         
         # Gate passing/collision
         normal = np.array([np.cos(yaw_gate), np.sin(yaw_gate)]).T
@@ -500,7 +525,7 @@ class Quadcopter3DGates(VecEnv):
         pos_old_projected = (pos_old[:,0]-pos_gate[:,0])*normal[:,0] + (pos_old[:,1]-pos_gate[:,1])*normal[:,1]
         pos_new_projected = (pos_new[:,0]-pos_gate[:,0])*normal[:,0] + (pos_new[:,1]-pos_gate[:,1])*normal[:,1]
         passed_gate_plane = (pos_old_projected < 0) & (pos_new_projected > 0)
-        gate_size = 1.5
+        gate_size = 1.
         gate_passed = passed_gate_plane & np.all(np.abs(pos_new - pos_gate)<gate_size/2, axis=1)
         gate_collision = passed_gate_plane & np.any(np.abs(pos_new - pos_gate)>gate_size/2, axis=1)
         
@@ -515,9 +540,15 @@ class Quadcopter3DGates(VecEnv):
         rewards[ground_collision] = -10
         
         # Check out of bounds
-        out_of_bounds = np.any(np.abs(new_states[:,0:2]) > 20, axis=1)          # edges of the grid
+        # out_of_bounds = np.any(np.abs(new_states[:,0:2]) > 20, axis=1)          # edges of the grid
+        
+        # x is in [-3,3]
+        out_of_bounds = np.abs(new_states[:,0]) > 3
+        # y is in [-8,8]
+        out_of_bounds |= np.abs(new_states[:,1]) > 8
+        # z is in [-10,0]
         out_of_bounds |= new_states[:,2] < -10                                  # max height (z-axis point down)
-        out_of_bounds |= np.any(np.abs(new_states[:,9:12]) > 1000, axis=1)      # prevent numerical issues
+        out_of_bounds |= np.any(np.abs(new_states[:,9:12]) > 30, axis=1)        # prevent gyro saturation
         rewards[out_of_bounds] = -10
         
         # Check number of steps

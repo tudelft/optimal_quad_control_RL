@@ -56,9 +56,11 @@ print("-----------------------------------")
 # path_overload = "models/ground_exp/test1/100000000.zip"
 # path_overload = "models/perception_exp/circle_1/290000000.zip"
 # path_overload = "models/perception_exp/long_rectangle_3(dummy30)/938000000.zip"
-# print("overloading weights from", path_overload)
-# model_old = PPO.load(path_overload)
-# model.policy.load_state_dict(model_old.policy.state_dict())
+# path_overload = 'models/perception_exp/long_oval_good_axis_convention/100000000'
+path_overload = 'models/perception_exp/long_oval_good_axis_convention_from_ground/100000000'
+print("overloading weights from", path_overload)
+model_old = PPO.load(path_overload)
+model.policy.load_state_dict(model_old.policy.state_dict())
 
 print("-----------------------------------")
 print(model.policy)
@@ -108,7 +110,7 @@ def train(model, log_name, n=int(1e9)):
 
 
 # RUN TRAINING LOOP
-name = 'long_rectangle_action_penalty_0.1'
+name = 'long_oval_good_axis_convention_from_ground_1mgate'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):
