@@ -110,7 +110,7 @@ def train(model, log_name, n=int(1e9)):
 
 
 # RUN TRAINING LOOP
-name = 'long_oval_good_axis_convention_from_ground_1mgate'
+name = 'long_oval_good_axis_convention_from_ground_1mgate_no_perception_reward'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):

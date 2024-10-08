@@ -517,7 +517,7 @@ class Quadcopter3DGates(VecEnv):
         perc_rewards = 0.02*np.exp(-10.0*perc_angle)
         
         # raise ValueError('stop')
-        rewards = prog_rewards - rat_penalty + perc_rewards
+        rewards = prog_rewards - rat_penalty #+ perc_rewards
         
         # Gate passing/collision
         normal = np.array([np.cos(yaw_gate), np.sin(yaw_gate)]).T
