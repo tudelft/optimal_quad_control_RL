@@ -57,10 +57,10 @@ print("-----------------------------------")
 # path_overload = "models/perception_exp/circle_1/290000000.zip"
 # path_overload = "models/perception_exp/long_rectangle_3(dummy30)/938000000.zip"
 # path_overload = 'models/perception_exp/long_oval_good_axis_convention/100000000'
-path_overload = 'models/perception_exp/long_oval_good_axis_convention_from_ground/100000000'
-print("overloading weights from", path_overload)
-model_old = PPO.load(path_overload)
-model.policy.load_state_dict(model_old.policy.state_dict())
+# path_overload = 'models/perception_exp/long_oval_good_axis_convention_from_ground/100000000'
+# print("overloading weights from", path_overload)
+# model_old = PPO.load(path_overload)
+# model.policy.load_state_dict(model_old.policy.state_dict())
 
 print("-----------------------------------")
 print(model.policy)
@@ -107,10 +107,14 @@ def train(model, log_name, n=int(1e9)):
         # save model
         model.save(models_dir + '/' + log_name + '/' + str(time_steps))
         print('Model saved at', models_dir + '/' + log_name + '/' + str(time_steps))
+        # curriculum learning
+        if (model.num_timesteps > 1e8):
+            model.env.initialize_at_random_gates = False
+            model.env.initialize_on_ground = True
 
 
 # RUN TRAINING LOOP
-name = 'long_oval_good_axis_convention_from_ground_1mgate_no_perception_reward'
+name = 'IROS_TRACK'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):

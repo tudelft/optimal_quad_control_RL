@@ -29,6 +29,11 @@ big_grid = graphics.create_grid(6, 16, 1)
 
 drone, forces = graphics.create_drone(0.08)
 
+# draw axis def
+x_axis = graphics.create_path(np.array([[0.,0.,0.],[1.,0.,0.]]))
+y_axis = graphics.create_path(np.array([[0.,0.,0.],[0.,1.,0.]]))
+z_axis = graphics.create_path(np.array([[0.,0.,0.],[0.,0.,1.]]))
+
 # nxn (m) gate
 n = 1.
 gate = graphics.create_path(np.array([
@@ -181,6 +186,11 @@ def view(get_drone_state=get_drone_state_zero,
     
         # draw grid
         big_grid.draw(frame, cam, color=(200, 200, 200), pt=1)
+        
+        # draw axis
+        x_axis.draw(frame, cam, color=(255, 0, 0), pt=2)
+        y_axis.draw(frame, cam, color=(0, 255, 0), pt=2)
+        z_axis.draw(frame, cam, color=(0, 0, 255), pt=2)
         
         # draw target
         if 'traj_x' in state:
