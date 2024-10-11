@@ -4,10 +4,10 @@ from . import graphics
 import time
 import os
 
-# screen resolution
-width = 864
-height = 700 #864
-f=1.e+3
+# cam matrix
+width = 640
+height = 480 #864
+f=435.
 
 # graphics
 cam = graphics.Camera(

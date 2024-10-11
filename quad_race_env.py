@@ -173,17 +173,17 @@ from stable_baselines3.common.vec_env import VecEnv
 # start_pos[2] = 0
 
 # RECTANGLE TRACK FOR TII
-# gate_pos = np.array([
-#     [1.5, -5., -1.5],
-#     [1.5,  5., -1.5],
-#     [0.0, 6.5, -1.5],
-#     [-1.5, 5., -1.5],
-#     [-1.5, -5., -1.5],
-#     [0.0, -6.5, -1.5]
-# ])
-# gate_yaw = np.array([0, 0, 0.5, 1, 1, 1.5])*np.pi+np.pi/2
-# start_pos = gate_pos[0] + np.array([0,-2,0])
-# start_pos[2] = 0
+gate_pos = np.array([
+    [1.5, -5., -1.5],
+    [1.5,  5., -1.5],
+    [0.0, 6.5, -1.5],
+    [-1.5, 5., -1.5],
+    [-1.5, -5., -1.5],
+    [0.0, -6.5, -1.5]
+])
+gate_yaw = np.array([0, 0, 0.5, 1, 1, 1.5])*np.pi+np.pi/2
+start_pos = gate_pos[0] + np.array([0,-2,0])
+start_pos[2] = 0
 
 # # SPLIT S TRACK
 # gate_pos_FLU = np.array([
@@ -207,36 +207,36 @@ from stable_baselines3.common.vec_env import VecEnv
 # gate_yaw = gate_yaw_FLU_deg*np.pi/180
 # start_pos = gate_pos[0] + np.array([-3,0,0])
 
-# IROS TRACK
-# start = [2.7, 1.06, 0.46]
-gate1 = [5.7, 1.06, 1.16]
-gate2 = [11.4, -1.06, 3.38]
-gate3 = [17.1, 1.06, 1.16]
-gate4 = [22.8, -1.06, 3.38]
-gate5 = [28.5, 1.06, 1.16]
-gate6 = [34.2, -1.06, 3.38]
-gate7 = [34.2, -1.06, 1.16]
-# end = [3.7, 1.06, 1.16]
-# lap = start,1,2,3,4,5,6,7,5,4,3,2,1,2,3,4,5,6,7,5,4,3,2,1,end
-gate_pos = np.array([
-    gate1,
-    gate2,
-    gate3,
-    gate4,
-    gate5,
-    gate6,
-    gate7,
-    gate5,
-    gate4,
-    gate3,
-    gate2,
-    gate1
-])
-# rotate to aligh with our axis
-x,y,z = gate_pos.T
-gate_pos = np.array([-y,x-20,-z]).T
-gate_yaw = np.array([0,0,0,0,0,0,1,1,1,1,1,1,1])*np.pi+np.pi/2
-start_pos = gate_pos[0] + np.array([0,-2,0])
+# # IROS TRACK
+# # start = [2.7, 1.06, 0.46]
+# gate1 = [5.7, 1.06, 1.16]
+# gate2 = [11.4, -1.06, 3.38]
+# gate3 = [17.1, 1.06, 1.16]
+# gate4 = [22.8, -1.06, 3.38]
+# gate5 = [28.5, 1.06, 1.16]
+# gate6 = [34.2, -1.06, 3.38]
+# gate7 = [34.2, -1.06, 1.16]
+# # end = [3.7, 1.06, 1.16]
+# # lap = start,1,2,3,4,5,6,7,5,4,3,2,1,2,3,4,5,6,7,5,4,3,2,1,end
+# gate_pos = np.array([
+#     gate1,
+#     gate2,
+#     gate3,
+#     gate4,
+#     gate5,
+#     gate6,
+#     gate7,
+#     gate5,
+#     gate4,
+#     gate3,
+#     gate2,
+#     gate1
+# ])
+# # rotate to aligh with our axis
+# x,y,z = gate_pos.T
+# gate_pos = np.array([-y,x-20,-z]).T
+# gate_yaw = np.array([0,0,0,0,0,0,1,1,1,1,1,1,1])*np.pi+np.pi/2
+# start_pos = gate_pos[0] + np.array([0,-2,0])
 
 # DEFINE ENVIRONMENT
 class Quadcopter3DGates(VecEnv):
