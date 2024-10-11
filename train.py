@@ -19,16 +19,16 @@ video_log_dir = 'videos/'+session_name
 env = Quadcopter3DGates(
     num_envs=100,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=True,
-    initialize_on_ground=False,
+    initialize_at_random_gates=False,
+    initialize_on_ground=True,
     cam_angle=np.pi/4
 )
 
 test_env = Quadcopter3DGates(
     num_envs=1,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=True,
-    initialize_on_ground=False,
+    initialize_at_random_gates=False,
+    initialize_on_ground=True,
     cam_angle=np.pi/4
 )
 
@@ -112,13 +112,13 @@ def train(model, log_name, n=int(2e8)):
         model.save(models_dir + '/' + log_name + '/' + str(time_steps))
         print('Model saved at', models_dir + '/' + log_name + '/' + str(time_steps))
         # curriculum learning
-        if (model.num_timesteps > 2e7):
-            model.env.initialize_at_random_gates = False
-            model.env.initialize_on_ground = True
+        # if (model.num_timesteps > 2e7):
+        #     model.env.initialize_at_random_gates = False
+        #     model.env.initialize_on_ground = True
 
 
 # RUN TRAINING LOOP
-name = 'long_oval_45degree_cam_angle_from_zero_gp'
+name = 'long_oval_45degree_cam_angle_ACTUALLY_GOOD'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):
