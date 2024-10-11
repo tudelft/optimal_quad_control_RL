@@ -106,7 +106,7 @@ f_func = lambdify((Array(state), Array(control), Array(params)), Array(f), 'nump
 # function for calculating perception angle
 cam_angle = symbols('cam_angle')
 # optical axis in body frame
-optical_axis = Matrix([cos(cam_angle), 0, sin(cam_angle)])
+optical_axis = Matrix([cos(cam_angle), 0, -sin(cam_angle)])
 # gate pos in world frame
 gx, gy, gz = symbols('gx gy gz')
 # gate pos in body frame
@@ -563,7 +563,7 @@ class Quadcopter3DGates(VecEnv):
         # rewards[gate_passed] = 1 #10 - 10*d2g_new[gate_passed]
         
         # Gate collision penalty
-        # rewards[gate_collision] = -10
+        rewards[gate_collision] = -10
 
         # Ground collision penalty (z > 0) & (v>2)
         ground_collision = (new_states[:,2] > 0) & (np.linalg.norm(new_states[:,3:6], axis=1) > 2)

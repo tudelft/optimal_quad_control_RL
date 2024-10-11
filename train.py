@@ -19,16 +19,16 @@ video_log_dir = 'videos/'+session_name
 env = Quadcopter3DGates(
     num_envs=100,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=False,
-    initialize_on_ground=True,
+    initialize_at_random_gates=True,
+    initialize_on_ground=False,
     cam_angle=np.pi/4
 )
 
 test_env = Quadcopter3DGates(
     num_envs=1,
     randomization=randomization_dummy_30_percent,
-    initialize_at_random_gates=False,
-    initialize_on_ground=True,
+    initialize_at_random_gates=True,
+    initialize_on_ground=False,
     cam_angle=np.pi/4
 )
 
@@ -60,7 +60,8 @@ print("-----------------------------------")
 # path_overload = "models/perception_exp/long_rectangle_3(dummy30)/938000000.zip"
 # path_overload = 'models/perception_exp/long_oval_good_axis_convention/100000000'
 # path_overload = 'models/perception_exp/long_oval_good_axis_convention_from_ground/100000000'
-path_overload = "models/perception_exp/long_oval_good_axis_convention_from_ground_1mgate/96000000.zip"
+# path_overload = "models/perception_exp/long_oval_good_axis_convention_from_ground_1mgate/96000000.zip"
+path_overload = "models/perception_exp/long_oval_good_axis_convention_from_ground_1mgate_no_perception_reward/100000000.zip"
 print("overloading weights from", path_overload)
 model_old = PPO.load(path_overload)
 model.policy.load_state_dict(model_old.policy.state_dict())
@@ -101,7 +102,7 @@ animate_policy(model, test_env)
     
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
-def train(model, log_name, n=int(1e8)):
+def train(model, log_name, n=int(2e8)):
     # save every 10 policy rollouts
     TIMESTEPS = model.n_steps*env.num_envs*10
     while model.num_timesteps < n:
@@ -111,13 +112,13 @@ def train(model, log_name, n=int(1e8)):
         model.save(models_dir + '/' + log_name + '/' + str(time_steps))
         print('Model saved at', models_dir + '/' + log_name + '/' + str(time_steps))
         # curriculum learning
-        # if (model.num_timesteps > 1e8):
-        #     model.env.initialize_at_random_gates = False
-        #     model.env.initialize_on_ground = True
+        if (model.num_timesteps > 2e7):
+            model.env.initialize_at_random_gates = False
+            model.env.initialize_on_ground = True
 
 
 # RUN TRAINING LOOP
-name = 'long_oval_45degree_cam_angle_retrain'
+name = 'long_oval_45degree_cam_angle_from_zero_gp'
 
 import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):
