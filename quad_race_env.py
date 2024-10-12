@@ -106,13 +106,13 @@ f_func = lambdify((Array(state), Array(control), Array(params)), Array(f), 'nump
 # function for calculating perception angle
 cam_angle = symbols('cam_angle')
 # optical axis in body frame
-optical_axis = Matrix([cos(cam_angle), 0, -sin(cam_angle)])
+optical_axis = Matrix([cos(cam_angle), 0, -sin(cam_angle)]) # checked!
 # gate pos in world frame
 gx, gy, gz = symbols('gx gy gz')
 # gate pos in body frame
-gate_pos_B = R.T@(Matrix([gx,gy,gz]) - Matrix([x,y,z]))
+gate_pos_B = R.T@(Matrix([gx,gy,gz]) - Matrix([x,y,z])) # checked
 # get angle between optical_axis and gate_pos_B
-perc_angle = acos(optical_axis.dot(gate_pos_B)/(optical_axis.norm()*gate_pos_B.norm()))
+perc_angle = acos(optical_axis.dot(gate_pos_B)/(optical_axis.norm()*(gate_pos_B.norm()))) # checked (but only use when 0.1m away from the gates)
 # lambdify
 get_perc_angle_func = lambda a: lambdify((Array(state), Array([gx,gy,gz])), perc_angle.subs(cam_angle, a), 'numpy')
 print('test')
@@ -544,10 +544,12 @@ class Quadcopter3DGates(VecEnv):
         
         # perception reward from (https://www.nature.com/articles/s41586-023-06419-4) l2*exp(l3*perc_angle) l2=0.02, l3=-10.0
         perc_angle = self.perc_angle_func(new_states.T, pos_gate.T)
-        perc_rewards = 0.02*np.exp(-10.0*perc_angle)
+        perc_rewards = 0.02*np.exp(-10.0*perc_angle**4)
+        # only use perception reward when 0.1m away from the gates
+        perc_rewards[d2g_new > 0.1] = 0
         
         # raise ValueError('stop')
-        rewards = prog_rewards - rat_penalty #+ perc_rewards
+        rewards = prog_rewards - rat_penalty + perc_rewards
         
         # Gate passing/collision
         normal = np.array([np.cos(yaw_gate), np.sin(yaw_gate)]).T
@@ -563,7 +565,7 @@ class Quadcopter3DGates(VecEnv):
         # rewards[gate_passed] = 1 #10 - 10*d2g_new[gate_passed]
         
         # Gate collision penalty
-        rewards[gate_collision] = -10
+        # rewards[gate_collision] = -10
 
         # Ground collision penalty (z > 0) & (v>2)
         ground_collision = (new_states[:,2] > 0) & (np.linalg.norm(new_states[:,3:6], axis=1) > 2)
@@ -574,8 +576,8 @@ class Quadcopter3DGates(VecEnv):
         
         # x is in [-3,3]
         out_of_bounds = np.abs(new_states[:,0]) > 3
-        # y is in [-20,20]
-        out_of_bounds |= np.abs(new_states[:,1]) > 20
+        # y is in [-8,8]
+        out_of_bounds |= np.abs(new_states[:,1]) > 8
         # z is in [-10,0]
         out_of_bounds |= new_states[:,2] < -10                                  # max height (z-axis point down)
         out_of_bounds |= np.any(np.abs(new_states[:,9:12]) > 30, axis=1)        # prevent gyro saturation
