@@ -5,9 +5,9 @@ import time
 import os
 
 # cam matrix
-width = 640
-height = 480 #864
-f=435.
+width = 640*2
+height = 480*2 #864
+f=435.*2
 
 # graphics
 cam = graphics.Camera(
@@ -25,7 +25,7 @@ def set_cam_f(f):
     cam.cameraMatrix[1,1] = f
 
 # grid = graphics.create_grid(10, 10, 0.1)
-big_grid = graphics.create_grid(6, 16, 1)
+big_grid = graphics.create_grid(6, 22, 1)
 
 drone, forces = graphics.create_drone(0.08)
 
@@ -35,7 +35,7 @@ y_axis = graphics.create_path(np.array([[0.,0.,0.],[0.,1.,0.]]))
 z_axis = graphics.create_path(np.array([[0.,0.,0.],[0.,0.,1.]]))
 
 # nxn (m) gate
-n = 1.
+n = 2.0
 gate = graphics.create_path(np.array([
     [0, n/2, n/2],
     [0, n/2, -n/2],
@@ -179,8 +179,12 @@ def view(get_drone_state=get_drone_state_zero,
         # drone camera
         if drone_cam:
             cam.pos = drone.vertices[-1] # camera point is the last vertex of the drone
-            cam.set_rotation([drone.theta[0], drone.theta[1]+cam_angle, drone.theta[2]])
-
+            cam.set_rotation([drone.theta[0], drone.theta[1], drone.theta[2]])
+            # IT SHOULD BE:
+            R_y = np.array([[np.cos(cam_angle), 0, np.sin(cam_angle)],[0, 1, 0],[-np.sin(cam_angle), 0, np.cos(cam_angle)]])
+            cam.rMat = np.dot(cam.rMat, R_y)
+            
+            
         # using screen resolution of width x height
         frame = 255*np.ones((height, width, 3), dtype=np.uint8)
     

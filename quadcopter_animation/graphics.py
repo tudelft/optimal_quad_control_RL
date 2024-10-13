@@ -212,7 +212,7 @@ def create_drone(r):
         [ 2*r/4,         -r/3, r/10]
     ]))
     
-    drone = group([c1, c2, c3, c4, l1, l2, l3, l4, l5, box])
+    drone = group([c1, c2, c3, c4, l1, l2, l3, l4, l5, box, l_extra])
     drone.vertices = np.concatenate([
         drone.vertices,
         np.array([[r, -r, 0.], [r, r, 0.], [-r, r, 0.], [-r, -r, 0.]])  # centers of the circles

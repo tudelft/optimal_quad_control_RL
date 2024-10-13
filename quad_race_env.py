@@ -173,17 +173,17 @@ from stable_baselines3.common.vec_env import VecEnv
 # start_pos[2] = 0
 
 # RECTANGLE TRACK FOR TII
-gate_pos = np.array([
-    [1.5, -5., -1.5],
-    [1.5,  5., -1.5],
-    [0.0, 6.5, -1.5],
-    [-1.5, 5., -1.5],
-    [-1.5, -5., -1.5],
-    [0.0, -6.5, -1.5]
-])
-gate_yaw = np.array([0, 0, 0.5, 1, 1, 1.5])*np.pi+np.pi/2
-start_pos = gate_pos[0] + np.array([0,-2,0])
-start_pos[2] = 0
+# gate_pos = np.array([
+#     [1.5, -5., -1.5],
+#     [1.5,  5., -1.5],
+#     [0.0, 6.5, -1.5],
+#     [-1.5, 5., -1.5],
+#     [-1.5, -5., -1.5],
+#     [0.0, -6.5, -1.5]
+# ])
+# gate_yaw = np.array([0, 0, 0.5, 1, 1, 1.5])*np.pi+np.pi/2
+# start_pos = gate_pos[0] + np.array([0,-2,0])
+# start_pos[2] = 0
 
 # # SPLIT S TRACK
 # gate_pos_FLU = np.array([
@@ -212,31 +212,70 @@ start_pos[2] = 0
 # gate1 = [5.7, 1.06, 1.16]
 # gate2 = [11.4, -1.06, 3.38]
 # gate3 = [17.1, 1.06, 1.16]
+# gate3_d = [17.1, -1.06, 1.16]
 # gate4 = [22.8, -1.06, 3.38]
+# gate4_d = [22.8, 1.06, 1.16]
 # gate5 = [28.5, 1.06, 1.16]
 # gate6 = [34.2, -1.06, 3.38]
 # gate7 = [34.2, -1.06, 1.16]
 # # end = [3.7, 1.06, 1.16]
 # # lap = start,1,2,3,4,5,6,7,5,4,3,2,1,2,3,4,5,6,7,5,4,3,2,1,end
 # gate_pos = np.array([
-#     gate1,
-#     gate2,
-#     gate3,
+#     # gate1,
+#     # gate2,
+#     gate3_d,
 #     gate4,
-#     gate5,
-#     gate6,
-#     gate7,
-#     gate5,
-#     gate4,
+#     gate4_d,
 #     gate3,
-#     gate2,
-#     gate1
+#     # gate5,
+#     # gate6,
+#     # gate7,
+#     # gate5,
+#     # gate4,
+#     # gate3,
+#     # gate2,
+#     # gate1
 # ])
 # # rotate to aligh with our axis
 # x,y,z = gate_pos.T
 # gate_pos = np.array([-y,x-20,-z]).T
-# gate_yaw = np.array([0,0,0,0,0,0,1,1,1,1,1,1,1])*np.pi+np.pi/2
+# # gate_yaw = np.array([0,0,0,0,0,0,1,1,1,1,1,1,1])*np.pi+np.pi/2
+# gate_yaw = np.array([0,0,1,1])*np.pi+np.pi/2
 # start_pos = gate_pos[0] + np.array([0,-2,0])
+
+# RATM TRACK
+start = [-9.9, 1.5, 1.55]
+
+gate7 = [-4.017256591796875, 2.33920458984375, 1.609997192382812] 
+# high gate in middle
+gate1 = [0.7398671875, 0.8331798095703125, 3.62595361328125]
+
+gate3 = [8.56800390625, -0.8592802124023438, 1.632771362304688]
+
+gate2 = [8.18197314453125, 2.017240844726563, 1.606711669921875]
+
+# high gate in middle
+gate1 = [0.7398671875, 0.8331798095703125, 3.62595361328125]
+
+gate6 = [-3.921347412109375, -1.824662353515625, 1.162585205078125]
+
+# split s
+gate4 = [-8.6310126953125, -1.8128515625, 4.3759677734375]
+gate5 = [-8.656234375, -1.8193818359375, 2.198724609375]
+
+
+gate_pos = np.array([
+    gate7, gate1, gate3, gate2, gate1, gate6, gate4, gate5
+])
+gate_yaw = np.array([0,0,0,-1,-1,-1,-1,0])*np.pi
+# transform to our coordinate system
+x,y,z = gate_pos.T
+gate_pos = np.array([-y,-x,-z]).T
+gate_yaw += np.pi/2
+sx,sy,sz = start
+# start_pos = np.array([-sy,-sx,-sz])
+start_pos = gate_pos[0] + np.array([0,2,0])
+
 
 # DEFINE ENVIRONMENT
 class Quadcopter3DGates(VecEnv):
@@ -557,7 +596,7 @@ class Quadcopter3DGates(VecEnv):
         pos_old_projected = (pos_old[:,0]-pos_gate[:,0])*normal[:,0] + (pos_old[:,1]-pos_gate[:,1])*normal[:,1]
         pos_new_projected = (pos_new[:,0]-pos_gate[:,0])*normal[:,0] + (pos_new[:,1]-pos_gate[:,1])*normal[:,1]
         passed_gate_plane = (pos_old_projected < 0) & (pos_new_projected > 0)
-        gate_size = 1.
+        gate_size = 2.
         gate_passed = passed_gate_plane & np.all(np.abs(pos_new - pos_gate)<gate_size/2, axis=1)
         gate_collision = passed_gate_plane & np.any(np.abs(pos_new - pos_gate)>gate_size/2, axis=1)
         
@@ -576,8 +615,8 @@ class Quadcopter3DGates(VecEnv):
         
         # x is in [-3,3]
         out_of_bounds = np.abs(new_states[:,0]) > 3
-        # y is in [-8,8]
-        out_of_bounds |= np.abs(new_states[:,1]) > 8
+        # y is in [-11,11]
+        out_of_bounds |= np.abs(new_states[:,1]) > 11
         # z is in [-10,0]
         out_of_bounds |= new_states[:,2] < -10                                  # max height (z-axis point down)
         out_of_bounds |= np.any(np.abs(new_states[:,9:12]) > 30, axis=1)        # prevent gyro saturation
@@ -597,7 +636,7 @@ class Quadcopter3DGates(VecEnv):
         rewards[self.final_gate_passed] = 10
         
         # Check if the episode is done
-        dones = max_steps_reached | ground_collision | out_of_bounds | gate_collision  #| self.final_gate_passed
+        dones = max_steps_reached | ground_collision | gate_collision | out_of_bounds  #| self.final_gate_passed
         self.dones = dones
         
         # Pause if collision
