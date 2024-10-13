@@ -118,6 +118,9 @@ get_perc_angle_func = lambda a: lambdify((Array(state), Array([gx,gy,gz])), perc
 print('test')
 print(get_perc_angle_func(0))
 
+# GET ACCELEROMETER
+get_accelerometer = lambdify((Array(state), Array(params)), Array([Dx, Dy, T]), 'numpy')
+
 # PARAMETER ENCODING (used for parameter input)
 # normalize thrust and moment constants by scaling with w_max
 k_wn = k_w*(w_max**2)
@@ -285,6 +288,7 @@ class Quadcopter3DGates(VecEnv):
                  gates_pos=gate_pos,
                  gate_yaw=gate_yaw,
                  start_pos=start_pos,
+                 bounds_xy = np.array([[-10,10],[-10,10]]),
                  gates_ahead=1,
                  pause_if_collision=False,
                  motor_limit=1.0,
@@ -297,6 +301,8 @@ class Quadcopter3DGates(VecEnv):
                  param_input_noise=0.,
                  seed=None,
                  cam_angle=0.0,
+                 gate_size=1.,
+                 disable_collision=False,
                  ):
         # cam angle
         self.cam_angle = cam_angle
@@ -314,6 +320,10 @@ class Quadcopter3DGates(VecEnv):
         self.gate_yaw = gate_yaw.astype(np.float32)
         self.num_gates = gates_pos.shape[0]
         self.gates_ahead = gates_ahead
+        # Define bounds
+        self.bounds_xy = bounds_xy
+        self.gate_size = gate_size
+        self.disable_collision = disable_collision
         
         # Pause if collision
         self.pause_if_collision = pause_if_collision
@@ -411,7 +421,9 @@ class Quadcopter3DGates(VecEnv):
         self.dones = np.zeros(num_envs, dtype=bool)
         self.final_gate_passed = np.zeros(num_envs, dtype=bool)
 
-        self.update_states = self.update_states_gate
+        # self.update_states = self.update_states_gate
+        self.accelerometer = np.zeros((self.num_envs,3), dtype=np.float32)
+        self.gyro = np.zeros((self.num_envs,3), dtype=np.float32)
         
         self.pause = False
     
@@ -420,7 +432,7 @@ class Quadcopter3DGates(VecEnv):
             np.random.seed(self.seed)
             torch.manual_seed(self.seed)
 
-    def update_states_gate(self):
+    def update_states(self):
         # Transform pos and vel in gate frame
         gate_pos = self.gate_pos[self.target_gates%self.num_gates]
         gate_yaw = self.gate_yaw[self.target_gates%self.num_gates]
@@ -566,6 +578,10 @@ class Quadcopter3DGates(VecEnv):
     def step_wait(self):
         new_states = self.world_states + self.dt*f_func(self.world_states.T, self.actions.T, self.params.T).T
         
+        # set accelerometer and gyro
+        self.accelerometer = get_accelerometer(self.world_states.T, self.params.T).T
+        self.gyro = new_states[:,9:12]
+        
         self.step_counts += 1
 
         pos_old = self.world_states[:,0:3]
@@ -596,9 +612,8 @@ class Quadcopter3DGates(VecEnv):
         pos_old_projected = (pos_old[:,0]-pos_gate[:,0])*normal[:,0] + (pos_old[:,1]-pos_gate[:,1])*normal[:,1]
         pos_new_projected = (pos_new[:,0]-pos_gate[:,0])*normal[:,0] + (pos_new[:,1]-pos_gate[:,1])*normal[:,1]
         passed_gate_plane = (pos_old_projected < 0) & (pos_new_projected > 0)
-        gate_size = 2.
-        gate_passed = passed_gate_plane & np.all(np.abs(pos_new - pos_gate)<gate_size/2, axis=1)
-        gate_collision = passed_gate_plane & np.any(np.abs(pos_new - pos_gate)>gate_size/2, axis=1)
+        gate_passed = passed_gate_plane & np.all(np.abs(pos_new - pos_gate)<self.gate_size/2, axis=1)
+        gate_collision = passed_gate_plane & np.any(np.abs(pos_new - pos_gate)>self.gate_size/2, axis=1)
         
         # Gate reward + dist penalty
         # rewards[gate_passed] = 1 #10 - 10*d2g_new[gate_passed]
@@ -613,10 +628,10 @@ class Quadcopter3DGates(VecEnv):
         # Check out of bounds
         # out_of_bounds = np.any(np.abs(new_states[:,0:2]) > 20, axis=1)          # edges of the grid
         
-        # x is in [-3,3]
-        out_of_bounds = np.abs(new_states[:,0]) > 3
-        # y is in [-11,11]
-        out_of_bounds |= np.abs(new_states[:,1]) > 11
+        out_of_bounds  = (new_states[:,0] < self.bounds_xy[0,0])
+        out_of_bounds |= (new_states[:,0] > self.bounds_xy[0,1])
+        out_of_bounds |= (new_states[:,1] < self.bounds_xy[1,0])
+        out_of_bounds |= (new_states[:,1] > self.bounds_xy[1,1])
         # z is in [-10,0]
         out_of_bounds |= new_states[:,2] < -10                                  # max height (z-axis point down)
         out_of_bounds |= np.any(np.abs(new_states[:,9:12]) > 30, axis=1)        # prevent gyro saturation
@@ -637,6 +652,8 @@ class Quadcopter3DGates(VecEnv):
         
         # Check if the episode is done
         dones = max_steps_reached | ground_collision | gate_collision | out_of_bounds  #| self.final_gate_passed
+        if self.disable_collision:
+            dones = max_steps_reached | ground_collision
         self.dones = dones
         
         # Pause if collision

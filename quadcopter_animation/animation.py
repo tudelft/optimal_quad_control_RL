@@ -103,6 +103,7 @@ def view(get_drone_state=get_drone_state_zero,
          hist_len=100,
          cam_angle=0.,
          reset_func=None,
+         gate_size=1,
          ):
     follow=False
     record=False
@@ -111,6 +112,15 @@ def view(get_drone_state=get_drone_state_zero,
     drone_cam = False
     pause = True
     
+    # nxn (m) gate
+    n = gate_size
+    gate = graphics.create_path(np.array([
+        [0, n/2, n/2],
+        [0, n/2, -n/2],
+        [0, -n/2, -n/2],
+        [0, -n/2, n/2]
+    ]), loop=True)
+
     # posistion history
     pos_hist = []
     
