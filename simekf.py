@@ -25,7 +25,7 @@ start_pos[2] = 0
 bounds_xy = np.array([[-3, 3], [-8, 8]])
 
 env = Quadcopter3DGates(
-    num_envs=1,
+    num_envs=2,
     start_pos=start_pos,
     gates_pos=gate_pos,
     gate_yaw=gate_yaw,
@@ -41,12 +41,41 @@ env = Quadcopter3DGates(
 env.dt = 1/500
 env.max_steps = 20*500
 
-# 2) load NN controller
-print("Loading model...")
-from stable_baselines3 import PPO
-path = 'models/perception_exp/long_oval_good_axis_convention_from_ground_1mgate/96000000.zip'
-model = PPO.load(path)
+# 2) compile NN controller
+import os
+import subprocess
+import ctypes
+print("Compiling NN controller...")
+path_to_c_code = '/home/robinferede/Git/optimal_quad_control_RL/c_code_nn'
+# Create object files
+subprocess.call('gcc -fPIC -c *.c', shell=True, cwd=path_to_c_code)
+# Create library
+subprocess.call('gcc -shared -Wl,-soname,libtools.so -o libtools.so *.o', shell=True, cwd=path_to_c_code)
+# Remove object files
+subprocess.call('rm *.o', shell=True, cwd=path_to_c_code)
 
+lib_path = os.path.abspath(path_to_c_code+"/libtools.so")
+lib_nn = ctypes.CDLL(lib_path)
+
+# define argument types 
+lib_nn.nn_forward.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+lib_nn.nn_control.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+
+def nn_control(x):
+    x = np.array(x, dtype=np.float32)
+
+    # scale to [w_min, w_max]
+    x[12:16] = (x[12:16] + 1)/2*(3000.)
+
+    c_net_input = (ctypes.c_float*len(x))(*x)
+    c_net_output = (ctypes.c_float*4)()
+    
+    
+    lib_nn.nn_control(c_net_input, c_net_output)
+    out = np.array(c_net_output[:])
+    # map back to [-1,1]
+    out = (out*2) - 1
+    return out
 
 # ekf is in quaternions, sim is in euler angles so we need a conversion function:
 def quat2euler(q):
@@ -74,12 +103,7 @@ def euler2quat(e):
 
 # 3) Get EKF functions from ekf_calc.c, ekf_calc.h #TODO: change absolute path
 print("Compiling EKF...")
-import os
-import subprocess
-import ctypes
-
-path_to_c_code = '/home/robinferede/Git/kalman_filter/c_code'
-# path_to_c_code = '/home/robinferede/Git/optimal_quad_control_RL/c_code'
+path_to_c_code = '/home/robinferede/Git/optimal_quad_control_RL/c_code_ekf'
 
 # https://cu7ious.medium.com/how-to-use-dynamic-libraries-in-c-46a0f9b98270
 path = os.path.abspath(path_to_c_code)
@@ -166,6 +190,9 @@ def get_IMU(env):
         gyro[2] + np.random.normal(0, std_IMU[5])
     ])
     
+def get_motor_speed(env):
+    return env.world_states[0][12:16]
+    
 def get_MOCAP(env):
     return env.world_states[0][0:7] + np.random.normal(0, std_MOCAP)
 
@@ -173,46 +200,41 @@ def get_MOCAP(env):
 from quadcopter_animation import animation
 print('Run ekf in sim')
 
-def animate_policy(model, env, **kwargs):
+def animate_policy(env, **kwargs):
     print('init')
     INIT() # resets env and ekf
     print('sim')
     def run():
         # 1) EKF STATE ESTIMATION
+        imu = get_IMU(env)
         if not env.dones[0]:
-            imu = get_IMU(env)
             predict(imu, env.dt)
-        # 2) set env state to ekf state
-        sim_world_state = env.world_states.copy()
+        
+        # 2) NN CONTROL (calculate actions from ekf state)  
         x = lib.ekf_get_X()
         ekf_state = np.array([x[i] for i in range(16)])
         ekf_pos = ekf_state[0:3]
         ekf_vel = ekf_state[3:6]
-        ekf_att = ekf_state[6:10] # quaternion
-        # normalize quaternion
-        ekf_att = ekf_att / np.linalg.norm(ekf_att)
-        lib.ekf_set_X((ctypes.c_float*len(ekf_state))(*ekf_state))
-        print(np.linalg.norm(ekf_att))
-        eulers = quat2euler(ekf_att)
+        ekf_quat = ekf_state[6:10] # quaternion
+        ekf_eulers = quat2euler(ekf_quat)
+        world_state = np.array([*ekf_pos, *ekf_vel, *ekf_eulers, *imu[3:6], *get_motor_speed(env)])
+        action = nn_control(world_state.copy())
+        actions = np.array([action, action])
         
-        env.world_states[0][0:9] = np.array([*ekf_pos, *ekf_vel, *eulers])
-        env.update_states() # update states for NN (observation calculation)
-        
-        # 3) NN CONTROL (calculate actions)
-        actions, _ = model.predict(env.states, deterministic=False)
-        
-        # 4) reset the env state to the simulation state
-        env.world_states = sim_world_state.copy()
-        print('eulers sim')
-        print(env.world_states[0][6:9])
-        env.update_states()
-        
+        steps = env.step_counts[0]+1
         states, rewards, dones, infos = env.step(actions)
+        
+        # 3) set env 2 state to ekf state
+        env.world_states[1] = world_state
+        env.update_states()
         
         if dones[0]:
             print(infos)
         
-        return env.render()
+        out = env.render()
+        out['color'] = [(255,0,0), (0,0,255)]
+        out['names'] = ['GT', 'EKF']
+        return out
     animation.view(run, gate_pos=env.gate_pos, gate_yaw=env.gate_yaw, reset_func=INIT, cam_angle=env.cam_angle, gate_size=env.gate_size, **kwargs)
 
-animate_policy(model, env, hist_len=10000, fps=500)
+animate_policy(env, hist_len=10000, fps=500)

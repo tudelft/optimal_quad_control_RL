@@ -16,12 +16,29 @@ models_dir = 'models/'+session_name
 log_dir = 'logs/'+session_name
 video_log_dir = 'videos/'+session_name
 
+
+# RACE TRACK
+# long oval race track in TII hall
+gate_pos = np.array([
+    [1.5, -5., -1.5],
+    [1.5,  5., -1.5],
+    [0.0, 6.5, -1.5],
+    [-1.5, 5., -1.5],
+    [-1.5, -5., -1.5],
+    [0.0, -6.5, -1.5]
+])
+gate_yaw = np.array([0, 0, 0.5, 1, 1, 1.5])*np.pi+np.pi/2
+start_pos = gate_pos[0] + np.array([0,-2,0])
+start_pos[2] = 0
+bounds_xy = np.array([[-3, 3], [-8, 8]])
+
 env = Quadcopter3DGates(
     num_envs=100,
     randomization=randomization_dummy_30_percent,
     initialize_at_random_gates=True,
     initialize_on_ground=False,
-    cam_angle=30.*np.pi/180.
+    cam_angle=30.*np.pi/180.,
+    gate_size=1.5,
 )
 
 test_env = Quadcopter3DGates(
@@ -29,7 +46,8 @@ test_env = Quadcopter3DGates(
     randomization=randomization_dummy_30_percent,
     initialize_at_random_gates=True,
     initialize_on_ground=False,
-    cam_angle=30.*np.pi/180.
+    cam_angle=30.*np.pi/180.,
+    gate_size=1.5,
 )
 
 # Wrap the environment in a Monitor wrapper

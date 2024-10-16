@@ -104,6 +104,7 @@ def view(get_drone_state=get_drone_state_zero,
          cam_angle=0.,
          reset_func=None,
          gate_size=1,
+         grid_bounds=[[-5,5],[-5,5]]
          ):
     follow=False
     record=False
@@ -111,6 +112,14 @@ def view(get_drone_state=get_drone_state_zero,
     draw_path=False
     drone_cam = False
     pause = True
+    
+    # grid
+    big_grid = graphics.create_grid(6, 22, 1)
+    x_min = grid_bounds[0][0]
+    x_max = grid_bounds[0][1]
+    y_min = grid_bounds[1][0]
+    y_max = grid_bounds[1][1]
+    big_grid = graphics.create_grid(y_max-y_min, x_max-x_min, 1)
     
     # nxn (m) gate
     n = gate_size
