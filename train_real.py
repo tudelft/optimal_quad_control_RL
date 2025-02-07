@@ -1,12 +1,13 @@
 # library imports
 import os
 import sys
+from time import time
 from stable_baselines3 import PPO
 from datetime import datetime
 from stable_baselines3.common.vec_env import VecMonitor
 
 # custom imports
-from quad_race_env import *
+from real_quad_env import *
 from randomization import *
 from quadcopter_animation import animation
 
@@ -214,6 +215,7 @@ for i in range(100):
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
 def train(model, test_env, log_name, n=int(1e8)):
+    start_time = time()
     # save every 10 policy rollouts
     TIMESTEPS = model.n_steps*env.num_envs*10
     while model.num_timesteps < n:
@@ -221,7 +223,9 @@ def train(model, test_env, log_name, n=int(1e8)):
         time_steps = model.num_timesteps
         # save model
         model.save(models_dir + '/' + log_name + '/' + str(time_steps))
-        print('Model saved at', models_dir + '/' + log_name + '/' + str(time_steps))
+        # print('Model saved at', models_dir + '/' + log_name + '/' + str(time_steps))
+        print(f'Time elapsed: {(time() - start_time):.2f}s')
+        print(f'Model saved at {models_dir}/{log_name}/{str(time_steps)}')
         # save policy animation
         # animate_policy(
         #     model,

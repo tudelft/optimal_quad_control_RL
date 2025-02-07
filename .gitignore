@@ -172,3 +172,7 @@ c_code/
 *.csv
 *.mp4
 *.npz
+
+# bash scripts
+script.sh
+script2.sh

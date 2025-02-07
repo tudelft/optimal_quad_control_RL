@@ -1,4 +1,4 @@
-name: quad
+name: droneracing
 channels:
   - pytorch
   - nvidia
