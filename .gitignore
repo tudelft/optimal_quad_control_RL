@@ -168,11 +168,14 @@ videos/
 flight_data/
 flight_data
 c_code/
+evorl/
 # everything that ends with .csv, .mp4, .npz
 *.csv
 *.mp4
 *.npz
 
 # bash scripts
-script.sh
-script2.sh
+*.sh
+
+# plot styling config
+custom.mplstyle

@@ -20,10 +20,10 @@ torch.set_default_device(device)
 
 # Equations of motion 3D quadcopter from https://arxiv.org/pdf/2304.13460.pdf
 axes = np.array([
-     [0, 0, -1],
-     [0, 0, -1],
-     [0, 0, -1],
-     [0, 0, -1] 
+     [0.06297139048133896, 0.11818131887569734, -0.9909933298714212],
+     [-0.04108029489564034, 0.20448475192592502, -0.9780073596865619],
+     [-0.059197487270421685, -0.15605137047003814, -0.9859734414654845],
+     [-0.0811869441220564, -0.1660954263927021, -0.9827619189994841] 
 ])
 
 state = symbols('x y z v_x v_y v_z phi theta psi p q r w1 w2 w3 w4')
@@ -109,6 +109,10 @@ d_w3 = d_W3/(w_max_n-w_min_n)*2
 d_w4 = d_W4/(w_max_n-w_min_n)*2
 
 # Thrust and Drag
+# T = -k_w*(W1**2 + W2**2 + W3**2 + W4**2)
+# Dx = -k_x*vbx*(W1+W2+W3+W4)
+# Dy = -k_y*vby*(W1+W2+W3+W4)
+
 fx = axes[0,0]*W1**2 + axes[1,0]*W2**2 + axes[2,0]*W3**2 + axes[3,0]*W4**2 \
     - 2*np.pi/0.127*(vd0*axes[0,0]*W1 + vd1*axes[1,0]*W2 + vd2*axes[2,0]*W3 + vd3*axes[3,0]*W4)
     
@@ -125,6 +129,10 @@ dz = vp0[2,0]*W1 + vp1[2,0]*W2 + vp2[2,0]*W3 + vp3[2,0]*W4
 Fx = k_wx*fx + k_x*dx
 Fy = k_wy*fy + k_y*dy
 Fz = k_wz*fz + k_z*dz
+
+# Fz = k_wz*(axes[0,2]*W1**2 + axes[1,2]*W2**2 + axes[2,2]*W3**2 + axes[3,2]*W4**2) + k_z*(vp0[2,0]*W1 + vp1[2,0]*W2 + vp2[2,0]*W3 + vp3[2,0]*W4)
+# Fx = k_wx*(axes[0,0]*W1**2 + axes[1,0]*W2**2 + axes[2,0]*W3**2 + axes[3,0]*W4**2) + k_x*(vp0[0,0]*W1 + vp1[0,0]*W2 + vp2[0,0]*W3 + vp3[0,0]*W4)
+# Fy = k_wy*(axes[0,1]*W1**2 + axes[1,1]*W2**2 + axes[2,1]*W3**2 + axes[3,1]*W4**2) + k_y*(vp0[1,0]*W1 + vp1[1,0]*W2 + vp2[1,0]*W3 + vp3[1,0]*W4)
 
 # Moments
 Mx = k_p1*W1**2 + k_p2*W2**2 + k_p3*W3**2 + k_p4*W4**2 + k_pd1*d_W1 + k_pd2*d_W2 + k_pd3*d_W3 + k_pd4*d_W4

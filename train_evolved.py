@@ -7,8 +7,8 @@ from datetime import datetime
 from stable_baselines3.common.vec_env import VecMonitor
 
 # custom imports
-from evorl.rl.evolve_drone_env import *
-from evorl.ctrl_allocation import ctrl_allocation_standard, ctrl_allocation_lambda, ctrl_allocation_alpha
+from real_evolved_env import *
+from randomization import *
 from quadcopter_animation import animation
 
 import argparse
@@ -39,15 +39,20 @@ parser.add_argument('--history_step_size', type=int, default=1, help='History st
 # Transfer learning (default is None)
 parser.add_argument('--transfer_learning', type=str, default=None, help='Transfer learning model (default is None)')
 
-# Track radius (default is 1.5)
-parser.add_argument('--r', type=float, default=1.5, help='Track radius (default is 1.5)')
+# Param input (boolean, default is False)
+parser.add_argument('--param_input', action='store_true', help='Use parameter input')
+
+# Param input noise (default = 0.0)
+parser.add_argument('--param_input_noise', type=float, default=0.0, help='Parameter input noise')
+
+# Randomization (randomized, fixed_5inch, fixed_3inch)
+parser.add_argument('--randomization', type=str, default='fixed_lambda', help='Randomization (fixed_standard, standard_10_percent,standard_20_percent)')
 
 # Train timestep
 parser.add_argument('--timesteps', type=int, default=1e8, help='Training timestep (default is 1e8)')
 
-# Drone type
-parser.add_argument('--drone', type=str, default="standard", help='Drone type (default is standard)')
-
+# Track radius (default is 1.5)
+parser.add_argument('--r', type=float, default=1.5, help='Track radius (default is 1.5)')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -61,26 +66,9 @@ print(f"Value function architecture: {args.vf}")
 print(f"State history input length: {args.state_history}")
 print(f"Action history input length: {args.action_history}")
 print(f"History step size: {args.history_step_size}")
-print(f"Transfer learning: {args.transfer_learning}")
-# print(f"Parameter input: {args.param_input}")
-# print(f"Parameter input noise: {args.param_input_noise}")
-# print(f"Randomization: {args.randomization}")
-
-# DEFINE DRONE CONTROL ALLOCATION
-if args.drone == "standard":
-    print("Training standard drone")
-    Bf, Bm = ctrl_allocation_standard()
-    
-elif args.drone == "lambda":
-    print("Training evolved drone")
-    Bf, Bm = ctrl_allocation_lambda()
-    
-elif args.drone == "alpha":
-    print("Training evolved drone")
-    Bf, Bm = ctrl_allocation_alpha()
-    
-else:
-    raise Exception("Error. Invalid drone type.")
+print(f"Parameter input: {args.param_input}")
+print(f"Parameter input noise: {args.param_input_noise}")
+print(f"Randomization: {args.randomization}")
 
 
 # DEFINE RACE TRACK
@@ -113,36 +101,75 @@ if not os.path.exists(video_log_dir):
 # Date and time string for unique folder names
 datetime_str = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-env = Drone3DGates(
+# CREATE ENVIRONMENTS
+if args.randomization == 'fixed_lambda':
+    randomization = randomization_fixed_params_lambda
+elif args.randomization == 'lambda_10_percent':
+    randomization = randomization_lambda_10_percent
+elif args.randomization == 'lambda_20_percent':
+    randomization = randomization_lambda_20_percent
+elif args.randomization == 'lambda_30_percent':
+    randomization = randomization_lambda_30_percent
+else:
+    print("Randomization not recognized")
+    # kill the process
+    sys.exit()
+    
+# if args.randomization == 'randomized':
+#     randomization = randomization_big
+# elif args.randomization == 'fixed_5inch':
+#     randomization = randomization_fixed_params_5inch
+# elif args.randomization == '5inch_10_percent':
+#     randomization = randomization_5inch_10_percent
+# elif args.randomization == '5inch_20_percent':
+#     randomization = randomization_5inch_20_percent
+# elif args.randomization == '5inch_30_percent':
+#     randomization = randomization_5inch_30_percent
+# elif args.randomization == 'fixed_3inch':
+#     randomization = randomization_fixed_params_3inch
+# elif args.randomization == '3inch_10_percent':
+#     randomization = randomization_3inch_10_percent
+# elif args.randomization == '3inch_20_percent':
+#     randomization = randomization_3inch_20_percent
+# elif args.randomization == '3inch_30_percent':
+#     randomization = randomization_3inch_30_percent
+# else:
+#     print("Randomization not recognized")
+#     # kill the process
+#     sys.exit()
+
+env = Quadcopter3DGates(
     num_envs=100,
-    Bf=Bf,
-    Bm=Bm,
     gates_pos=gate_pos,
     gate_yaw=gate_yaw,
     start_pos=start_pos,
+    randomization=randomization,
     gates_ahead=1, 
     num_state_history=args.state_history,
     num_action_history=args.action_history,
     history_step_size=args.history_step_size,
+    param_input=args.param_input,
+    param_input_noise=args.param_input_noise
 )
-test_env = Drone3DGates(
+test_env = Quadcopter3DGates(
     num_envs=1,
-    Bf=Bf,
-    Bm=Bm,
     gates_pos=gate_pos,
     gate_yaw=gate_yaw,
     start_pos=start_pos,
-    initialize_at_random_gates=False,
+    randomization=randomization,
     gates_ahead=1,
     num_state_history=args.state_history,
     num_action_history=args.action_history,
     history_step_size=args.history_step_size,
+    param_input=args.param_input,
+    param_input_noise=args.param_input_noise
 )
 
 # Wrap the environment in a Monitor wrapper
 env = VecMonitor(env)
 
 # MODEL DEFINITION
+# policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=[64,64], vf=[64,64])], log_std_init = 0)
 policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=[dict(pi=args.pi, vf=args.vf)], log_std_init = 0)
 model = PPO(
     "MlpPolicy",
@@ -156,23 +183,9 @@ model = PPO(
     gamma=0.999
 )
 
-# model = PPO(
-#     "MlpPolicy",
-#     env,
-#     policy_kwargs=policy_kwargs,
-#     verbose=0,
-#     tensorboard_log=log_dir,
-#     n_steps=500,
-#     batch_size=5000,
-#     n_epochs=10,
-#     gamma=0.999
-# )
-
-
 # Load model for transfer learning
 if args.transfer_learning is not None:
     model = PPO.load('models' + '/' + args.transfer_learning, env=env, tensorboard_log=log_dir)
-    # model.num_timesteps = 0
 
 print("Model created with policy architecture", args.pi, "and value function architecture", args.vf)
 print("-----------------------------------")
@@ -210,8 +223,21 @@ print("Saving videos to", video_log_dir)
 # animate untrained policy (use this to set the recording camera position)
 # animate_policy(model, test_env)
 
+# TESTING
+test_env.reset()
 
-
+# do 100 steps and print state and action
+for i in range(100):
+    print('step', i)
+    num = test_env.num_state_history+1
+    state_len = int(len(test_env.states[0])/num)
+    for j in range(num):
+        print('state', j, '=', test_env.states[0][j*state_len:(j+1)*state_len])
+    actions, _ = model.predict(test_env.states, deterministic=True)
+    states, rewards, dones, infos = test_env.step(actions)
+    print('actions=', actions[0])
+    print('')
+    
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
 def train(model, test_env, log_name, n=int(args.timesteps)):
@@ -223,9 +249,6 @@ def train(model, test_env, log_name, n=int(args.timesteps)):
     time_steps = model.num_timesteps
     # save model
     model.save(models_dir + '/' + log_name + '/' + str(time_steps))
-    # print('Model saved at', models_dir + '/' + log_name + '/' + str(time_steps))
-    print(f'Time elapsed: {(time() - start_time):.2f}s')
-    print(f'Model saved at {models_dir}/{log_name}/{str(time_steps)}')
     while model.num_timesteps < n:
         model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=log_name)
         time_steps = model.num_timesteps
@@ -238,7 +261,7 @@ def train(model, test_env, log_name, n=int(args.timesteps)):
         # animate_policy(
         #     model,
         #     test_env,
-        #     record_steps=1200,    env.reset()
+        #     record_steps=1200,
         #     record_file=video_log_dir + '/' + log_name + '/' + str(time_steps) + '.mp4',
         #     show_window=False
         # )
@@ -261,9 +284,6 @@ import shutil
 if os.path.exists(log_dir + '/' + name + '_0'):
     print("Deleting logs...")
     shutil.rmtree(log_dir + '/' + name + '_0', ignore_errors=True)
-if os.path.exists(log_dir + '/' + name + '_1'):
-    print("Deleting logs...")
-    shutil.rmtree(log_dir + '/' + name + '_1', ignore_errors=True)
 if os.path.exists(models_dir + '/' + name):
     print("Deleting models...")
     shutil.rmtree(models_dir + '/' + name, ignore_errors=True)
@@ -273,24 +293,3 @@ if os.path.exists(video_log_dir + '/' + name):
 
 print("Training model", name)
 train(model, test_env, name)
-
-# TESTING
-test_env.reset()
-
-# do 1000 steps and print state and action
-for i in range(1000):
-    num = test_env.num_state_history+1
-    state_len = int(len(test_env.states[0])/num)
-    actions, _ = model.predict(test_env.states, deterministic=True)
-    states, rewards, dones, infos = test_env.step(actions)
-    
-    if (i+1)%500 == 0:
-        print('step', i)
-        # for j in range(num):
-            # print('state', j, '=', test_env.states[0][j*state_len:(j+1)*state_len])
-        # print('actions=', actions[0])
-        print('rewards=', rewards)
-        print('Num gates passed=', infos)
-        print('')
-
-

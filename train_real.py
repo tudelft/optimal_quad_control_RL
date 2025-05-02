@@ -22,10 +22,10 @@ parser.add_argument('session_name', type=str, help='Name of the training session
 parser.add_argument('name', type=str, help='Name of the model')
 
 # Architecture of the policy (list of integers)
-parser.add_argument('--pi', type=int, nargs='+', default=[64, 64], help='Architecture of the policy (e.g., --pi 64 64). Default is [64, 64]')
+parser.add_argument('--pi', type=int, nargs='+', default=[64, 64, 64], help='Architecture of the policy (e.g., --pi 64 64 64). Default is [64, 64, 64]')
 
 # Architecture of the value function (list of integers)
-parser.add_argument('--vf', type=int, nargs='+', default=[64, 64], help='Architecture of the value function (e.g., --vf 64 64). Default is [64, 64]')
+parser.add_argument('--vf', type=int, nargs='+', default=[64, 64, 64], help='Architecture of the value function (e.g., --vf 64 64 64). Default is [64, 64, 64]')
 
 # State history input length (default is 0)
 parser.add_argument('--state_history', type=int, default=0, help='State history input length (default is 0)')
@@ -36,6 +36,9 @@ parser.add_argument('--action_history', type=int, default=0, help='Action histor
 # History step size (default is 1)
 parser.add_argument('--history_step_size', type=int, default=1, help='History step size (default is 1)')
 
+# Transfer learning (default is None)
+parser.add_argument('--transfer_learning', type=str, default=None, help='Transfer learning model (default is None)')
+
 # Param input (boolean, default is False)
 parser.add_argument('--param_input', action='store_true', help='Use parameter input')
 
@@ -43,7 +46,13 @@ parser.add_argument('--param_input', action='store_true', help='Use parameter in
 parser.add_argument('--param_input_noise', type=float, default=0.0, help='Parameter input noise')
 
 # Randomization (randomized, fixed_5inch, fixed_3inch)
-parser.add_argument('--randomization', type=str, default='randomized', help='Randomization (randomized, fixed_5inch, fixed_3inch)')
+parser.add_argument('--randomization', type=str, default='fixed_standard', help='Randomization (fixed_standard, standard_10_percent,standard_20_percent)')
+
+# Train timestep
+parser.add_argument('--timesteps', type=int, default=1e8, help='Training timestep (default is 1e8)')
+
+# Track radius (default is 1.5)
+parser.add_argument('--r', type=float, default=1.5, help='Track radius (default is 1.5)')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -63,7 +72,7 @@ print(f"Randomization: {args.randomization}")
 
 
 # DEFINE RACE TRACK
-r = 1.5
+r = args.r
 gate_pos = np.array([
     [ r,  -r, -1.5],
     [ 0,   0, -1.5],
@@ -93,28 +102,41 @@ if not os.path.exists(video_log_dir):
 datetime_str = datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # CREATE ENVIRONMENTS
-if args.randomization == 'randomized':
-    randomization = randomization_big
-elif args.randomization == 'fixed_5inch':
-    randomization = randomization_fixed_params_5inch
-elif args.randomization == '5inch_10_percent':
-    randomization = randomization_5inch_10_percent
-elif args.randomization == '5inch_20_percent':
-    randomization = randomization_5inch_20_percent
-elif args.randomization == '5inch_30_percent':
-    randomization = randomization_5inch_30_percent
-elif args.randomization == 'fixed_3inch':
-    randomization = randomization_fixed_params_3inch
-elif args.randomization == '3inch_10_percent':
-    randomization = randomization_3inch_10_percent
-elif args.randomization == '3inch_20_percent':
-    randomization = randomization_3inch_20_percent
-elif args.randomization == '3inch_30_percent':
-    randomization = randomization_3inch_30_percent
+if args.randomization == 'fixed_standard':
+    randomization = randomization_fixed_params_standard
+elif args.randomization == 'standard_10_percent':
+    randomization = randomization_standard_10_percent
+elif args.randomization == 'standard_20_percent':
+    randomization = randomization_standard_20_percent
+elif args.randomization == 'standard_30_percent':
+    randomization = randomization_standard_30_percent
 else:
     print("Randomization not recognized")
     # kill the process
     sys.exit()
+    
+# if args.randomization == 'randomized':
+#     randomization = randomization_big
+# elif args.randomization == 'fixed_5inch':
+#     randomization = randomization_fixed_params_5inch
+# elif args.randomization == '5inch_10_percent':
+#     randomization = randomization_5inch_10_percent
+# elif args.randomization == '5inch_20_percent':
+#     randomization = randomization_5inch_20_percent
+# elif args.randomization == '5inch_30_percent':
+#     randomization = randomization_5inch_30_percent
+# elif args.randomization == 'fixed_3inch':
+#     randomization = randomization_fixed_params_3inch
+# elif args.randomization == '3inch_10_percent':
+#     randomization = randomization_3inch_10_percent
+# elif args.randomization == '3inch_20_percent':
+#     randomization = randomization_3inch_20_percent
+# elif args.randomization == '3inch_30_percent':
+#     randomization = randomization_3inch_30_percent
+# else:
+#     print("Randomization not recognized")
+#     # kill the process
+#     sys.exit()
 
 env = Quadcopter3DGates(
     num_envs=100,
@@ -160,6 +182,10 @@ model = PPO(
     n_epochs=10,
     gamma=0.999
 )
+
+# Load model for transfer learning
+if args.transfer_learning is not None:
+    model = PPO.load('models' + '/' + args.transfer_learning, env=env, tensorboard_log=log_dir)
 
 print("Model created with policy architecture", args.pi, "and value function architecture", args.vf)
 print("-----------------------------------")
@@ -214,10 +240,15 @@ for i in range(100):
     
 # TRAINING
 # training loop saves model every 10 policy rollouts and saves a video animation
-def train(model, test_env, log_name, n=int(1e8)):
+def train(model, test_env, log_name, n=int(args.timesteps)):
     start_time = time()
     # save every 10 policy rollouts
     TIMESTEPS = model.n_steps*env.num_envs*10
+    # Reset timesteps for 1st loop
+    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=True, tb_log_name=log_name)
+    time_steps = model.num_timesteps
+    # save model
+    model.save(models_dir + '/' + log_name + '/' + str(time_steps))
     while model.num_timesteps < n:
         model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=log_name)
         time_steps = model.num_timesteps
