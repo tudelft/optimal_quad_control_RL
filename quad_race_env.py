@@ -79,7 +79,7 @@ Dy = -k_y*vby*(W1+W2+W3+W4)
 # Moments
 Mx = -k_p1*W1**2 - k_p2*W2**2 + k_p3*W3**2 + k_p4*W4**2
 My = -k_q1*W1**2 + k_q2*W2**2 - k_q3*W3**2 + k_q4*W4**2
-Mz = -k_r1*W1 + k_r2*W2 + k_r3*W3 - k_r4*W4 - k_r5*d_W1 + k_r6*d_W1 + k_r7*d_W1 - k_r8*d_W1
+Mz = -k_r1*W1 + k_r2*W2 + k_r3*W3 - k_r4*W4 - k_r5*d_W1 + k_r6*d_W2 + k_r7*d_W3 - k_r8*d_W4
 
 # Dynamics
 d_x = vx
