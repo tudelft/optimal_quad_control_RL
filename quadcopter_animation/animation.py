@@ -103,6 +103,9 @@ def view(get_drone_state=get_drone_state_zero,
     if show_window:
         cv2.namedWindow('animation')
         cv2.setMouseCallback('animation', cam.mouse_control)
+    
+    # time tracking    
+    last_time = time.time()
 
     while True:
         # keep track of steps
@@ -113,6 +116,13 @@ def view(get_drone_state=get_drone_state_zero,
             print('recording saved in ' + record_file)
             break
 
+        # make sure the loop is fps fps
+        current_time = time.time()
+        elapsed_time = current_time - last_time
+        if elapsed_time < 1/fps:
+            time.sleep(float(1/fps) - elapsed_time)
+        last_time = time.time()
+        
         # get drone state
         state = get_drone_state()
 
