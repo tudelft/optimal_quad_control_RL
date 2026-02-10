@@ -24,6 +24,14 @@ big_grid = graphics.create_grid(10, 10, 1)
 
 drone, forces = graphics.create_drone(0.08)
 
+# create nose arrow (body x-axis)
+nose_len = 0.5  # arrow length
+nose_arrow = graphics.create_path(
+    np.array([
+        [0, 0, 0],
+        [nose_len, 0, 0]
+    ], dtype=np.float64)
+)
 # nxn (m) gate
 n = 1.5
 gate = graphics.create_path(np.array([
@@ -82,6 +90,7 @@ def view(get_drone_state=get_drone_state_zero,
     follow=False
     record=False
     draw_forces=True
+    draw_noses=True
     
     # target point for the drone
     target = graphics.create_path(np.array([[0,0,0],[0,0,0.01]]))
@@ -156,6 +165,12 @@ def view(get_drone_state=get_drone_state_zero,
             graphics.set_thrust(drone, forces, u*scl)
             # draw drone
             drone.draw(frame, cam, color=(255, 0, 0), pt=2)
+            # draw noses
+            if draw_noses:
+                # draw nose arrow (blue)
+                nose_arrow.translate(pos - nose_arrow.pos)
+                nose_arrow.rotate(ori)
+                nose_arrow.draw(frame, cam, color=(255, 200, 120), pt=2, arrow=True)
 
             # draw forces
             if draw_forces:
@@ -173,6 +188,11 @@ def view(get_drone_state=get_drone_state_zero,
                 else:
                     drone.draw(frame, cam, color=(255, 0, 0), pt=2)
 
+                if draw_noses:
+                    # draw nose arrow (blue)
+                    nose_arrow.translate(pos[i] - nose_arrow.pos)
+                    nose_arrow.rotate(ori[i])
+                    nose_arrow.draw(frame, cam, color=(255, 200, 120), pt=2, arrow=True)
                 # draw forces
                 if draw_forces:
                     for force in forces:
@@ -251,6 +271,7 @@ def animate(t, x, y, z, phi, theta, psi, u,
     draw_path=False
     draw_forces=False
     record=False
+    # draw_noses=True
     
     if 'follow' in kwargs:
         follow = kwargs['follow']
@@ -383,6 +404,11 @@ def animate(t, x, y, z, phi, theta, psi, u,
                     drone.draw(frame, cam, color=colors[i], pt=2)
                 else:
                     drone.draw(frame, cam, color=(255, 0, 0), pt=2)
+                # if draw_noses:
+                #     # draw nose arrow (blue)
+                #     nose_arrow.translate(pos[time_index] - nose_arrow.pos)
+                #     nose_arrow.rotate(ori[time_index])
+                #     nose_arrow.draw(frame, cam, color=(255, 0, 0), pt=2, arrow=True)
                 if draw_forces:
                     for force in forces:
                         force.draw(frame, cam, pt=2)
@@ -403,6 +429,11 @@ def animate(t, x, y, z, phi, theta, psi, u,
         if draw_forces and not simultaneous:
             for force in forces:
                 force.draw(frame, cam, pt=2)
+        # if draw_noses and not simultaneous:
+        #     # draw nose arrow (blue)
+        #     nose_arrow.translate(pos[time_index] - nose_arrow.pos)
+        #     nose_arrow.rotate(ori[time_index])
+        #     nose_arrow.draw(frame, cam, color=(255, 0, 0), pt=2, arrow=True)
 
         # draw gates
         for gpos, gyaw in zip(gate_pos, gate_yaw):
