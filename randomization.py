@@ -48,6 +48,106 @@ randomization_3inch_20_percent = lambda num: {key: np.random.uniform(value*0.8, 
 # 30% randomization
 randomization_3inch_30_percent = lambda num: {key: np.random.uniform(value*0.7, value*1.3, num) if key != 'k' else np.random.uniform(value*0.7, min(value*1.3, 1), num) for key, value in params_3inch.items()}
 
+def rand_uniform(x, range=0.2, rng=None):
+    """Uniform randomization: x * U[0.8, 1.2]."""
+    rng = rng or np.random.default_rng()
+    return x * rng.uniform(1-range, 1+range)
+
+def randomization_SkyDreamer(num):
+    # returns randomized parameters based on robin and till's values
+    # actuator model
+    w_min = np.random.uniform(273.16, 410.1, size=num) # 341.75 ± 20%
+    w_max = np.random.uniform(2480, 3720, size=num) # 3100 ± 20%
+    k = np.random.uniform(0.3, 0.7, size=num)  # 0.5 ± 0.2
+    tau = np.random.uniform(0.01, 0.05, size=num)# 0.03 ± 0.02
+    # notice that the para below is scaled
+    scale_infactor = 3100 ** 2
+    # thrust and drag
+    k_w = 1.55e-06
+    k_wn = np.random.uniform(0.8 * k_w, 1.2 * k_w, size=num)
+    k_x, k_y = 5.37e-05, 5.37e-05
+    k_xn = np.random.uniform(0.8 * k_x, 1.2 * k_x, size=num)
+    k_yn = np.random.uniform(0.8 * k_y, 1.2 * k_y, size=num)
+
+    # drag coef for body
+    k_xd, k_yd = 4.10e-03, 1.51e-02
+    k_xdn = np.random.uniform(0.8 * k_xd, 1.2 * k_xd, size=num)
+    k_ydn = np.random.uniform(0.8 * k_yd, 1.2 * k_yd, size=num)
+
+    # extra parameter
+    k_angle, k_hor = 3.145, 7.245
+    k_angle_n = np.random.uniform(0.95 * k_angle, 1.05 * k_angle, size=num)
+    k_hor_n = np.random.uniform(0.95 * k_hor, 1.05 * k_hor, size=num)
+
+    k_vd = 0
+    k_vdn = np.random.uniform(0.95 * k_vd, 1.05 * k_vd, size=num)
+    Jx, Jy, Jz = -0.89, 0.96, -0.34
+    Jxn = np.random.uniform(0.95 * Jx, 1.05 * Jx, size=num)
+    Jyn = np.random.uniform(0.95 * Jy, 1.05 * Jy, size=num)
+    Jzn = np.random.uniform(0.95 * Jz, 1.05 * Jz, size=num)
+    # moments parameters variation per motor
+    k_p1 = 4.99e-05
+    k_p1n = np.random.uniform(0.8 * k_p1, 1.2 * k_p1, size=num)
+    k_p2 = 3.78e-05
+    k_p2n = np.random.uniform(0.8 * k_p2, 1.2 * k_p2, size=num)
+    k_p3 = 4.82e-05
+    k_p3n = np.random.uniform(0.8 * k_p3, 1.2 * k_p3, size=num)
+    k_p4 = 3.83e-05
+    k_p4n = np.random.uniform(0.8 * k_p4, 1.2 * k_p4, size=num)
+
+    k_q1 = 2.05e-05
+    k_q1n = np.random.uniform(0.8 * k_q1, 1.2 * k_q1, size=num)
+    k_q2 = 2.46e-05
+    k_q2n = np.random.uniform(0.8 * k_q2, 1.2 * k_q2, size=num)
+    k_q3 = 2.02e-05
+    k_q3n = np.random.uniform(0.8 * k_q3, 1.2 * k_q3, size=num)
+    k_q4 = 2.57e-05
+    k_q4n = np.random.uniform(0.8 * k_q4, 1.2 * k_q4, size=num)
+
+    k_r = 3.38e-03
+    k_rn = np.random.uniform(0.8 * k_r, 1.2 * k_r, size=num)
+    k_rd = 3.24e-04
+    k_rdn = np.random.uniform(0.8 * k_rd, 1.2 * k_rd, size=num)
+
+    prop_r = 0.09144
+    prop_r_n = np.random.uniform(1 * prop_r, 1 * prop_r, size=num)
+    # non-normalized parameters
+    return {
+        'k_w': k_wn,
+        'k_x': k_xn,
+        'k_y': k_yn,
+        'k_p1': k_p1n,
+        'k_p2': k_p2n,
+        'k_p3': k_p3n,
+        'k_p4': k_p4n,
+        'k_q1': k_q1n,
+        'k_q2': k_q2n,
+        'k_q3': k_q3n,
+        'k_q4': k_q4n,
+        'k_r1': k_rn,
+        'k_r2': k_rn,
+        'k_r3': k_rn,
+        'k_r4': k_rn,
+        'k_r5': k_rdn,
+        'k_r6': k_rdn,
+        'k_r7': k_rdn,
+        'k_r8': k_rdn,
+        'tau': tau,
+        'k': k,
+        'w_min': w_min,
+        'w_max': w_max,
+        'k_xd' : k_xdn,
+        'k_yd' : k_ydn,
+        'k_angle' : k_angle_n,
+        'k_hor' : k_hor_n,
+        'k_vd' : k_vdn,
+        'Jx' : Jxn,
+        'Jy' : Jyn,
+        'Jz' : Jzn,
+        'prop_r': prop_r_n  # meters
+    }
+
+
 def randomization_big(num):
     # returns randomized parameters based on robin and till's values
     
@@ -102,6 +202,15 @@ def randomization_big(num):
         'k_r8': k_rdn/(w_max),
         'tau': tau,
         'k': k,
-        'w_min': w_min,
-        'w_max': w_max        
+        'w_min': 0,
+        'w_max': 0,
+        'k_xd': 0,
+        'k_yd': 0,
+        'k_angle': 0,
+        'k_hor': 0,
+        'k_vd': 0,
+        'Jx': 0,
+        'Jy': 0,
+        'Jz': 0,
+        'prop_r': 0.09144 # meters
     }

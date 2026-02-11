@@ -1,3 +1,4 @@
+import sympy
 import torch
 import stable_baselines3
 import sys
@@ -25,8 +26,8 @@ control = symbols('U_1 U_2 U_3 U_4')    # normalized motor commands between [-1,
 u1,u2,u3,u4 = control
 
 g = 9.81
-params = symbols('k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4, k_r1, k_r2, k_r3, k_r4, k_r5, k_r6, k_r7, k_r8, tau, k, w_min, w_max')
-k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4, k_r1, k_r2, k_r3, k_r4, k_r5, k_r6, k_r7, k_r8, tau, k, w_min, w_max = params
+params = symbols('k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4, k_r1, k_r2, k_r3, k_r4, k_r5, k_r6, k_r7, k_r8, tau, k, w_min, w_max, k_xd, k_yd, k_angle, k_hor, k_vd, Jx, Jy, Jz, prop_r')
+k_x, k_y, k_w, k_p1, k_p2, k_p3, k_p4, k_q1, k_q2, k_q3, k_q4, k_r1, k_r2, k_r3, k_r4, k_r5, k_r6, k_r7, k_r8, tau, k, w_min, w_max, k_xd, k_yd, k_angle, k_hor, k_vd, Jx, Jy, Jz, prop_r = params # add 8 new param
 
 # Rotation matrix 
 Rx = Matrix([[1, 0, 0], [0, cos(phi), -sin(phi)], [0, sin(phi), cos(phi)]])
@@ -71,15 +72,20 @@ d_w2 = d_W2/(w_max_n-w_min_n)*2
 d_w3 = d_W3/(w_max_n-w_min_n)*2
 d_w4 = d_W4/(w_max_n-w_min_n)*2
 
-# Thrust and Drag
-T = -k_w*(W1**2 + W2**2 + W3**2 + W4**2)
-Dx = -k_x*vbx*(W1+W2+W3+W4)
-Dy = -k_y*vby*(W1+W2+W3+W4)
+# Thrust and Drag   # add extra parameter in dynamics
+prop_r = 0.09144 # meters
+aver_W = (W1 + W2 + W3 + W4) * prop_r
+miu_xx_yy = sympy.atan2((vbx ** 2 + vby ** 2), aver_W)
+k_alpha = 0
+alpha = sympy.atan2(vbx, aver_W)
+T = -k_w * (1 + k_alpha * alpha + k_hor * miu_xx_yy) * (W1**2 + W2**2 + W3**2 + W4**2) - k_vd * vbz * abs(vbz)
+Dx = -k_x*vbx*(W1+W2+W3+W4) - k_xd*vbx*abs(vbx) # add new drag coef
+Dy = -k_y*vby*(W1+W2+W3+W4) - k_vd*vby*abs(vby)
 
-# Moments
-Mx = -k_p1*W1**2 - k_p2*W2**2 + k_p3*W3**2 + k_p4*W4**2
-My = -k_q1*W1**2 + k_q2*W2**2 - k_q3*W3**2 + k_q4*W4**2
-Mz = -k_r1*W1 + k_r2*W2 + k_r3*W3 - k_r4*W4 - k_r5*d_W1 + k_r6*d_W2 + k_r7*d_W3 - k_r8*d_W4
+# Moments # add new moment coef
+Mx = -k_p1*W1**2 - k_p2*W2**2 + k_p3*W3**2 + k_p4*W4**2 + Jx*q*r
+My = -k_q1*W1**2 + k_q2*W2**2 - k_q3*W3**2 + k_q4*W4**2 + Jy*p*r
+Mz = -k_r1*W1 + k_r2*W2 + k_r3*W3 - k_r4*W4 - k_r5*d_W1 + k_r6*d_W2 + k_r7*d_W3 - k_r8*d_W4 + Jz*p*q
 
 # Dynamics
 d_x = vx
@@ -417,6 +423,13 @@ class Quadcopter3DGates(VecEnv):
         self.actions = actions
     
     def step_wait(self):
+        # noise_act = 0.05
+        # U_list = (self.actions + 1.0) / 2.0
+        # U_list = np.clip(U_list, 0.0, 1.0)
+        # noise_cal = np.random.uniform(1-noise_act, 1+noise_act, size=U_list.shape)
+        # U_list = np.clip(U_list * noise_cal, 0.0, 1.0)
+        # self.actions = 2.0 * U_list - 1.0
+
         new_states = self.world_states + self.dt*f_func(self.world_states.T, self.actions.T, self.params.T).T
         
         self.step_counts += 1
