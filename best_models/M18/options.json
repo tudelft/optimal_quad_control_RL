@@ -1,0 +1,180 @@
+{
+    "model_name": "M18",
+    "TrainConfig": {
+        "pretrained_model": "X (unavailable)"
+    },
+    "EnvironmentConfig": {
+        "speed_limit": 99,
+        "gate_size": 0.5,
+        "cam_angle_degrees": 43,
+        "flight_plan": "flight_plans/grand_challenge.json",
+        "num_envs": 100,
+        "initialize_at_random_gates": false,
+        "initialize_on_ground": false,
+        "initialize_uniform": true,
+        "pause_if_collision": false,
+        "disable_gate_collision": false,
+        "loop_gates": true,
+        "pos_noise": 0.0,
+        "vel_noise": 0.0,
+        "pos_jumps_std": 0.0,
+        "vel_offset_std": 0.0,
+        "ground_height": 0.0,
+        "gate_thickness": 1.0,
+        "v_ground": 2,
+        "progress_reward": 1,
+        "gate_reward": 1,
+        "angular_rate_penalty": 0.001,
+        "gate_offset_penalty": 1,
+        "perception_penalty": 0.01,
+        "motor_penalty": 0,
+        "motor_penalty_threshold": 0,
+        "low_action_penalty": 0,
+        "crash_penalty": 10
+    },
+    "PPOConfig": {
+        "activation_fn": "relu",
+        "pi": [
+            64,
+            64,
+            64
+        ],
+        "vf": [
+            64,
+            64,
+            64
+        ],
+        "log_std_init": 0,
+        "n_steps": 2000,
+        "batch_size": 5000,
+        "n_epochs": 10,
+        "gamma": 0.999,
+        "ent_coef": 0.003
+    },
+    "ModelParams": {
+        "k_w": [
+            1.55e-06,
+            40
+        ],
+        "k_x": [
+            5.37e-05,
+            40
+        ],
+        "k_y": [
+            5.37e-05,
+            40
+        ],
+        "k_x2": [
+            0.0041,
+            40
+        ],
+        "k_y2": [
+            0.0151,
+            40
+        ],
+        "k_v2": [
+            0.0,
+            40
+        ],
+        "k_angle": [
+            3.14514,
+            40
+        ],
+        "k_hor": [
+            7.245,
+            40
+        ],
+        "k_p1": [
+            4.99e-05,
+            40
+        ],
+        "k_p2": [
+            3.78e-05,
+            40
+        ],
+        "k_p3": [
+            4.82e-05,
+            40
+        ],
+        "k_p4": [
+            3.83e-05,
+            40
+        ],
+        "Jx": [
+            -0.89,
+            40
+        ],
+        "k_q1": [
+            2.05e-05,
+            40
+        ],
+        "k_q2": [
+            2.46e-05,
+            40
+        ],
+        "k_q3": [
+            2.02e-05,
+            40
+        ],
+        "k_q4": [
+            2.57e-05,
+            40
+        ],
+        "Jy": [
+            0.96,
+            40
+        ],
+        "k_r1": [
+            0.00338,
+            40
+        ],
+        "k_r2": [
+            0.00338,
+            40
+        ],
+        "k_r3": [
+            0.00338,
+            40
+        ],
+        "k_r4": [
+            0.00338,
+            40
+        ],
+        "k_r5": [
+            0.000324,
+            40
+        ],
+        "k_r6": [
+            0.000324,
+            40
+        ],
+        "k_r7": [
+            0.000324,
+            40
+        ],
+        "k_r8": [
+            0.000324,
+            40
+        ],
+        "Jz": [
+            -0.34,
+            40
+        ],
+        "w_min": [
+            341.75,
+            40
+        ],
+        "w_max": [
+            3100.0,
+            30
+        ],
+        "k": [
+            0.3,
+            40
+        ],
+        "tau": [
+            0.025,
+            40
+        ]
+    }
+}

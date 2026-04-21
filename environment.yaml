@@ -1,0 +1,27 @@
+name: quad_race
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - anaconda
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pytorch-cuda
+  - pytorch
+  - torchvision
+  - pip
+  - pip:
+    - numpy
+    - scipy
+    - sympy
+    - matplotlib
+    - tensorboard
+    - stable-baselines3
+    - gymnasium
+    - opencv-python
+    - setuptools<81
+    - wheel
+    - jax
+    - tabulate
