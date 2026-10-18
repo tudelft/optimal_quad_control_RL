@@ -19,13 +19,19 @@ For the gate-detection dataset see
 Free to use. Please refer to the corresponding paper:
 
 ```
-@misc{2601.15222,
-  Author = {Stavrow A. Bahnam and Robin Ferede and Till M. Blaha and Anton E. Lang and Erin Lucassen and Quentin Missinne and Aderik E. C. Verraest and Christophe De Wagter and Guido C. H. E. de Croon},
-  Title = {MonoRace: Winning Champion-Level Drone Racing with Robust Monocular AI},
-  Year = {2026},
-  Eprint = {arXiv:2601.15222},
+@article{bahnam2026monorace,
+  author  = {Stavrow A. Bahnam and Robin Ferede and Till M. Blaha and Anton E. Lang and Erin Lucassen and Quentin Missinne and Aderik E. C. Verraest and Christophe De Wagter and Guido C. H. E. de Croon},
+  title   = {MonoRace: Robust monocular AI for champion-level drone racing},
+  journal = {Science Robotics},
+  volume  = {11},
+  number  = {119},
+  pages   = {eaee9250},
+  year    = {2026},
+  doi     = {10.1126/scirobotics.aee9250},
 }
 ```
+
+Preprint: [arXiv:2601.15222](https://arxiv.org/abs/2601.15222)
 
 ## Install
 
